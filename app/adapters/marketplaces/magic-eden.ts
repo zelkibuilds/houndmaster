@@ -1,33 +1,92 @@
 import type {
-  CollectionConfig,
+  AdapterConfig,
   Collection,
   ApiResponse,
   CollectionAnalysis,
 } from "~/types/magic-eden";
 
-export class NFTCollectionFetcher {
+export class MagicEdenAdapter {
   private baseUrl: string;
-  private config: Required<CollectionConfig>;
+  private config: Required<AdapterConfig>;
   private lastRequestTime: number;
   private count: number;
 
-  constructor(config: CollectionConfig = {}) {
-    this.baseUrl =
-      "https://api-mainnet.magiceden.dev/v3/rtp/ethereum/collections/v7";
-
+  constructor(config: AdapterConfig = {}) {
     // Set default configuration with required properties
     this.config = {
       maxAgeMonths: config.maxAgeMonths ?? 6,
       minFloorPrice: config.minFloorPrice ?? 0.1,
-      maxTotalCollections: config.maxTotalCollections ?? 20,
-      requestsPerSecond: config.requestsPerSecond ?? 1.5,
+      minTotalCollections: config.minTotalCollections ?? 200,
+      requestsPerSecond: config.requestsPerSecond ?? 2,
+      // Magic Eden sometimes times us out if we set minRequestInterval to 500ms
       minRequestInterval: config.minRequestInterval ?? 600,
+      chain: config.chain ?? "ethereum",
+      limit: config.limit ?? 1000,
     };
 
     this.lastRequestTime = 0;
     this.count = 0;
+
+    this.baseUrl = `https://api-mainnet.magiceden.dev/v3/rtp/${this.config.chain}/collections/v7`;
   }
 
+  // Public Methods
+  public async fetchCollections(): Promise<{
+    recent: Collection[];
+    old: Collection[];
+  }> {
+    const collections: Collection[] = [];
+    let continuation: string | null = null;
+
+    try {
+      do {
+        const params = {
+          sortBy: "updatedAt",
+          sortDirection: "desc",
+          limit: this.config.limit,
+          minFloorAskPrice: this.config.minFloorPrice,
+          includeMintStages: "true",
+          ...(continuation ? { continuation } : {}),
+        };
+
+        const response = await this.makeRequest(params);
+
+        const validCollections = this.processCollections(response.collections);
+        collections.push(...validCollections);
+
+        continuation = response.continuation ?? null;
+
+        if (this.shouldStopFetching(collections, response)) {
+          break;
+        }
+      } while (continuation);
+    } catch (error) {
+      console.error("Error during collection fetching:", error);
+      return this.separateCollectionsByAge(collections);
+    }
+
+    return this.separateCollectionsByAge(collections);
+  }
+
+  public formatCollectionData(collection: Collection): CollectionAnalysis {
+    return {
+      name: collection.name,
+      mintValue: this.calculateTotalMintValue(collection),
+      weeklyVolume: collection.volume?.["7day"] ?? 0,
+      floorPrice: collection.floorAsk?.price,
+      deployedAt: collection.contractDeployedAt,
+      totalSupply: collection.supply,
+      remainingSupply: collection.remainingSupply,
+      mintStages: collection.mintStages ?? [],
+      externalUrl: collection.externalUrl,
+      tokenCount: collection.tokenCount,
+      primaryContract: collection.primaryContract,
+      twitterUsername: collection.twitterUsername,
+      discordUrl: collection.discordUrl,
+    };
+  }
+
+  // Private Methods
   private async enforceRateLimit(): Promise<void> {
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequestTime;
@@ -75,7 +134,7 @@ export class NFTCollectionFetcher {
         return this.makeRequest(params);
       }
 
-      this.count += 20;
+      this.count += this.config.limit;
 
       return data;
     } catch (error) {
@@ -85,44 +144,6 @@ export class NFTCollectionFetcher {
         }`
       );
     }
-  }
-
-  public async fetchCollections(): Promise<Collection[]> {
-    const collections: Collection[] = [];
-    let continuation: string | null = null;
-
-    try {
-      do {
-        const params = {
-          sortBy: "createdAt",
-          sortDirection: "desc",
-          limit: 20,
-          minFloorAskPrice: this.config.minFloorPrice,
-          includeMintStages: "true",
-          ...(continuation ? { continuation } : {}),
-        };
-
-        const response = await this.makeRequest(params);
-
-        const validCollections = this.processCollections(response.collections);
-        collections.push(...validCollections);
-
-        console.log("Count:", this.count);
-
-        continuation = response.continuation ?? null;
-
-        if (this.shouldStopFetching(collections, response)) {
-          break;
-        }
-      } while (continuation);
-    } catch (error) {
-      console.error("Error during collection fetching:", error);
-      return collections;
-    }
-
-    const result = this.filterCollectionsByAge(collections);
-
-    return result;
   }
 
   private filterCollectionsByAge(collections: Collection[]): Collection[] {
@@ -138,11 +159,51 @@ export class NFTCollectionFetcher {
     });
   }
 
+  private separateCollectionsByAge(collections: Collection[]): {
+    recent: Collection[];
+    old: Collection[];
+  } {
+    const maxAgeDate = new Date();
+    maxAgeDate.setMonth(maxAgeDate.getMonth() - this.config.maxAgeMonths);
+    const cutoffTimestamp = maxAgeDate.getTime() / 1000;
+
+    const result = collections.reduce(
+      (acc, collection) => {
+        const deployedAt = collection.contractDeployedAt;
+        const isRecent =
+          deployedAt &&
+          new Date(deployedAt).getTime() >= cutoffTimestamp * 1000;
+
+        if (isRecent) {
+          acc.recent.push(collection);
+        } else {
+          acc.old.push(collection);
+        }
+        return acc;
+      },
+      { recent: [] as Collection[], old: [] as Collection[] }
+    );
+
+    result.recent.sort(
+      (a, b) =>
+        new Date(b.contractDeployedAt).getTime() -
+        new Date(a.contractDeployedAt).getTime()
+    );
+
+    result.old.sort(
+      (a, b) =>
+        new Date(b.contractDeployedAt).getTime() -
+        new Date(a.contractDeployedAt).getTime()
+    );
+
+    return result;
+  }
+
   private shouldStopFetching(
     collections: Collection[],
     response: ApiResponse
   ): boolean {
-    if (collections.length >= this.config.maxTotalCollections) {
+    if (collections.length >= this.config.minTotalCollections) {
       return true;
     }
 
@@ -159,13 +220,18 @@ export class NFTCollectionFetcher {
       try {
         return (
           //   this.hasSignificantMinting(collection) &&
-          this.hasActiveTrading(collection)
+          this.hasActiveTrading(collection) &&
+          this.hasSignificantVolume(collection)
         );
       } catch (error) {
         console.error(`Error processing collection ${collection.name}:`, error);
         return false;
       }
     });
+  }
+
+  private hasSignificantVolume(collection: Collection): boolean {
+    return (collection.volume?.allTime ?? 0) >= 1;
   }
 
   private hasSignificantMinting(collection: Collection): boolean {
@@ -184,24 +250,6 @@ export class NFTCollectionFetcher {
 
   private hasActiveTrading(collection: Collection): boolean {
     return (collection.volume?.["7day"] ?? 0) > 0;
-  }
-
-  public formatCollectionData(collection: Collection): CollectionAnalysis {
-    return {
-      name: collection.name,
-      mintValue: this.calculateTotalMintValue(collection),
-      weeklyVolume: collection.volume?.["7day"] ?? 0,
-      floorPrice: collection.floorAsk?.price,
-      deployedAt: collection.contractDeployedAt,
-      totalSupply: collection.supply,
-      remainingSupply: collection.remainingSupply,
-      mintStages: collection.mintStages ?? [],
-      externalUrl: collection.externalUrl,
-      tokenCount: collection.tokenCount,
-      primaryContract: collection.primaryContract,
-      twitterUsername: collection.twitterUsername,
-      discordUrl: collection.discordUrl,
-    };
   }
 
   private calculateTotalMintValue(collection: Collection): number {

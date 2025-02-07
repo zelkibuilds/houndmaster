@@ -1,9 +1,11 @@
-export interface CollectionConfig {
+export interface AdapterConfig {
+  chain?: string;
   maxAgeMonths?: number;
   minFloorPrice?: number;
-  maxTotalCollections?: number;
+  minTotalCollections?: number;
   requestsPerSecond?: number;
   minRequestInterval?: number;
+  limit?: number;
 }
 
 export interface PriceAmount {

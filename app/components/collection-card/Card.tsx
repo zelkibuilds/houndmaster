@@ -1,4 +1,6 @@
+import { useParams } from "react-router";
 import type { CollectionAnalysis } from "~/types/magic-eden";
+import { getExplorerUrl } from "./helpers";
 
 function formatEth(value: number): string {
   return `${value.toFixed(2)} ETH`;
@@ -18,6 +20,13 @@ interface CollectionCardProps {
 }
 
 export function CollectionCard({ collection }: CollectionCardProps) {
+  const params = useParams();
+  const chain = params.chain;
+
+  const explorerUrl = collection.primaryContract
+    ? getExplorerUrl(chain || "", collection.primaryContract)
+    : "";
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
       <h2 className="text-xl font-bold mb-3 text-black">{collection.name}</h2>
@@ -68,7 +77,7 @@ export function CollectionCard({ collection }: CollectionCardProps) {
       {collection.primaryContract && (
         <p>
           <a
-            href={`https://etherscan.io/token/${collection.primaryContract}`}
+            href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-500 hover:text-blue-700"
