@@ -30,6 +30,8 @@ export function CollectionGallery({
     });
   };
 
+  const isSelectionEmpty = selectedContracts.size === 0;
+
   const clearSelection = () => {
     setSelectedContracts(new Set());
   };
@@ -68,23 +70,22 @@ export function CollectionGallery({
   return (
     <>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">
+        <h1 className="text-4xl font-medieval text-orange-400 tracking-wider">
           Recently Launched NFT Collections
         </h1>
         <button
           type="button"
           onClick={clearSelection}
-          disabled={selectedContracts.size === 0}
-          className={`px-4 py-2 rounded-lg transition-colors
+          disabled={isSelectionEmpty}
+          className={`px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
             ${
-              selectedContracts.size === 0
-                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+              isSelectionEmpty
+                ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
+                : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
             }
           `}
         >
-          Clear Selection{" "}
-          {selectedContracts.size > 0 && `(${selectedContracts.size})`}
+          Clear Selection {!isSelectionEmpty && `(${selectedContracts.size})`}
         </button>
       </div>
 
