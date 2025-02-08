@@ -45,16 +45,17 @@ export function CollectionCard({
   return (
     <button
       type="button"
-      className={`flex flex-col items-start w-full text-left bg-white rounded-lg shadow-lg p-6 
-        transition-all duration-200 cursor-pointer
-        hover:shadow-xl hover:scale-[1.02] 
-        focus:outline-none focus:ring-2 focus:ring-blue-400 
+      className={`flex flex-col items-start w-full text-left bg-[#1A0B26] rounded-xl shadow-lg p-6 
+        transition-all duration-200 cursor-pointer border-2 
         ${
           isSelected
-            ? "ring-2 ring-blue-500 bg-blue-50"
-            : "hover:bg-gray-50 active:bg-gray-100"
+            ? "border-orange-400/80 ring-2 ring-orange-500/50 bg-[#2D1144] shadow-orange-500/20"
+            : "border-purple-800/90 hover:border-orange-500/50 hover:bg-[#2D1144] hover:shadow-orange-500/10"
         }
-        relative
+        relative before:absolute before:inset-px before:rounded-[10px] before:bg-gradient-to-b before:from-white/5 before:to-transparent before:pointer-events-none
+        after:absolute after:-inset-0.5 after:rounded-xl after:bg-gradient-to-b after:from-purple-500/5 after:via-purple-500/5 after:to-orange-500/10 after:-z-10
+        hover:shadow-2xl hover:scale-[1.02] hover:after:to-orange-500/20
+        focus:outline-none focus:ring-2 focus:ring-orange-500/50
       `}
       onClick={handleClick}
       onKeyDown={(e) => {
@@ -64,13 +65,13 @@ export function CollectionCard({
         }
       }}
     >
-      <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-gray-100">
+      <div className="relative w-full h-48 mb-4 rounded-lg overflow-hidden bg-[#2D1144] border border-purple-700/30">
         <div className="absolute top-3 right-3 z-10">
           <div
-            className={`w-5 h-5 rounded-full border-2 transition-colors ${
+            className={`w-5 h-5 rounded-full transition-all duration-300 ${
               isSelected
-                ? "border-blue-500 bg-blue-500"
-                : "border-gray-300 bg-white"
+                ? "bg-gradient-to-br from-orange-400 to-orange-600 border-2 border-orange-300 shadow-lg shadow-orange-500/30"
+                : "border-2 border-purple-400/30 bg-[#1A0B26]"
             }`}
           >
             {isSelected && (
@@ -93,32 +94,46 @@ export function CollectionCard({
           <img
             src={collection.sampleImages[0]}
             alt={`Sample from ${collection.name}`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <span className="text-gray-400 text-sm">No preview available</span>
+          <div className="w-full h-full bg-[#1A0B26] flex items-center justify-center">
+            <span className="text-purple-200/50 text-sm font-medieval">
+              No preview available
+            </span>
           </div>
         )}
       </div>
 
-      <h2 className="text-xl font-bold mb-3 text-black">{collection.name}</h2>
-      <div className="space-y-2 text-gray-600">
-        <p className="font-semibold text-green-600">
+      <h2 className="text-xl font-bold mb-3 text-orange-100 font-medieval tracking-wider">
+        {collection.name}
+      </h2>
+      <div className="space-y-2.5 text-purple-100">
+        <p className="font-semibold text-orange-400 flex items-center gap-2 font-medieval">
+          <span className="text-xs">⚔️</span>
           Total Raised: {formatEth(collection.mintValue)}
         </p>
 
-        <p>Weekly Volume: {formatEth(collection.weeklyVolume)}</p>
+        <p className="font-medium flex items-center gap-2">
+          <span className="text-xs">📈</span>
+          <span className="font-medieval">Weekly Volume:</span>{" "}
+          {formatEth(collection.weeklyVolume)}
+        </p>
 
-        <p>
-          Floor Price:{" "}
+        <p className="font-medium flex items-center gap-2">
+          <span className="text-xs">💎</span>
+          <span className="font-medieval">Floor Price:</span>{" "}
           {collection.floorPrice
             ? `${collection.floorPrice.amount.native} ${collection.floorPrice.currency.symbol}`
             : "???"}
         </p>
 
-        <p>Launched: {getTimeSinceDeployment(collection.deployedAt)}</p>
+        <p className="font-medium flex items-center gap-2">
+          <span className="text-xs">🗓</span>
+          <span className="font-medieval">Launched:</span>{" "}
+          {getTimeSinceDeployment(collection.deployedAt)}
+        </p>
       </div>
 
       {collection.externalUrl && (
@@ -127,26 +142,31 @@ export function CollectionCard({
             href={collection.externalUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-700"
+            className="text-orange-400 hover:text-orange-300 font-medieval inline-flex items-center gap-1 group"
           >
-            Project Website ↗
+            Project Website
+            <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+              ↗
+            </span>
           </a>
         </p>
       )}
 
       {collection.tokenCount && (
-        <p className="text-sm text-gray-500 mt-2">
-          Token Count: {collection.tokenCount.toLocaleString()}
+        <p className="text-sm text-purple-300/90 mt-2 font-medium flex items-center gap-2">
+          <span className="text-xs">👥</span>
+          <span className="font-medieval">Token Count:</span>{" "}
+          {collection.tokenCount.toLocaleString()}
         </p>
       )}
 
-      <div className="flex gap-4 mt-4">
+      <div className="flex gap-4 mt-4 border-t border-purple-800/30 pt-4">
         {collection.primaryContract && (
           <a
             href={explorerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-gray-500 hover:text-gray-700"
+            className="text-purple-200 hover:text-orange-300 transition-colors"
             title="View Contract"
           >
             <EtherscanIcon className="w-5 h-5" />
@@ -158,7 +178,7 @@ export function CollectionCard({
             href={`https://x.com/${collection.twitterUsername}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-gray-500 hover:text-gray-700"
+            className="text-purple-200 hover:text-orange-300 transition-colors"
             title="Twitter"
           >
             <TwitterIcon className="w-5 h-5" />
@@ -170,7 +190,7 @@ export function CollectionCard({
             href={collection.discordUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-gray-500 hover:text-gray-700"
+            className="text-purple-200 hover:text-orange-300 transition-colors"
             title="Discord Server"
           >
             <DiscordIcon className="w-5 h-5" />
