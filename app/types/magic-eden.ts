@@ -44,6 +44,7 @@ export interface Collection {
   mintStages?: MintStage[];
   supply: string;
   remainingSupply: string;
+  sampleImages?: string[];
   volume?: {
     "1day": number;
     "7day": number;
@@ -57,9 +58,14 @@ export interface Collection {
   discordUrl?: string;
 }
 
+export interface TokenSample {
+  image: string;
+}
+
 export interface ApiResponse {
   collections: Collection[];
   continuation?: string;
+  tokens?: TokenSample[];
 }
 
 export interface CollectionAnalysis {
@@ -76,4 +82,5 @@ export interface CollectionAnalysis {
   primaryContract?: string;
   twitterUsername?: string;
   discordUrl?: string;
+  sampleImages?: string[];
 }

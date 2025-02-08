@@ -3,6 +3,7 @@ import type {
   Collection,
   ApiResponse,
   CollectionAnalysis,
+  TokenSample,
 } from "~/types/magic-eden";
 
 export class MagicEdenAdapter {
@@ -83,6 +84,7 @@ export class MagicEdenAdapter {
       primaryContract: collection.primaryContract,
       twitterUsername: collection.twitterUsername,
       discordUrl: collection.discordUrl,
+      sampleImages: collection.sampleImages,
     };
   }
 

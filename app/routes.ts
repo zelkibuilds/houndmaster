@@ -7,7 +7,7 @@ import {
 } from "@react-router/dev/routes";
 
 export default [
-  index("routes/home.tsx"),
+  index("routes/eth-redirect.tsx"),
   ...prefix("houndmaster", [
     layout("routes/houndmaster/layout.tsx", [
       index("routes/houndmaster/index.tsx"),
