@@ -5,17 +5,44 @@ import { EtherscanIcon } from "~/icons/EtherscanIcon";
 import { TwitterIcon } from "~/icons/TwitterIcon";
 import { DiscordIcon } from "~/icons/DiscordIcon";
 
-function formatEth(value: number): string {
-  return `${value.toFixed(2)} ETH`;
+function formatToken(value: number, chain?: string): string {
+  const symbol = chain === "apechain" ? "APE" : "ETH";
+  return `${value.toFixed(2)} ${symbol}`;
 }
 
 function getTimeSinceDeployment(deployedAt: string): string {
   const deploymentDate = new Date(deployedAt);
   const now = new Date();
-  const monthsDiff =
-    (now.getFullYear() - deploymentDate.getFullYear()) * 12 +
-    (now.getMonth() - deploymentDate.getMonth());
-  return `${monthsDiff} months ago`;
+  const diffMs = now.getTime() - deploymentDate.getTime();
+
+  // Convert to various units
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const months = Math.floor(days / 30);
+
+  // Less than a day: show hours, minutes, seconds
+  if (days < 1) {
+    if (hours > 0) {
+      const remainingMinutes = minutes % 60;
+      const remainingSeconds = seconds % 60;
+      return `${hours}h ${remainingMinutes}m ${remainingSeconds}s ago`;
+    }
+    if (minutes > 0) {
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s ago`;
+    }
+    return `${seconds}s ago`;
+  }
+
+  // Less than a month: show days
+  if (months < 1) {
+    return `${days} ${days === 1 ? "day" : "days"} ago`;
+  }
+
+  // Show months
+  return `${months} ${months === 1 ? "month" : "months"} ago`;
 }
 
 interface CollectionCardProps {
@@ -112,20 +139,24 @@ export function CollectionCard({
       <div className="space-y-2.5 text-purple-100">
         <p className="font-semibold text-orange-400 flex items-center gap-2 font-medieval">
           <span className="text-xs">⚔️</span>
-          Total Raised: {formatEth(collection.mintValue)}
+          Total Raised: {formatToken(collection.mintValue, chain)}
         </p>
 
         <p className="font-medium flex items-center gap-2">
           <span className="text-xs">📈</span>
           <span className="font-medieval">Weekly Volume:</span>{" "}
-          {formatEth(collection.weeklyVolume)}
+          {formatToken(collection.weeklyVolume, chain)}
         </p>
 
         <p className="font-medium flex items-center gap-2">
           <span className="text-xs">💎</span>
           <span className="font-medieval">Floor Price:</span>{" "}
           {collection.floorPrice
-            ? `${collection.floorPrice.amount.native} ${collection.floorPrice.currency.symbol}`
+            ? `${collection.floorPrice.amount.native} ${
+                chain === "apechain"
+                  ? "APE"
+                  : collection.floorPrice.currency.symbol
+              }`
             : "???"}
         </p>
 

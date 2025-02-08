@@ -89,9 +89,14 @@ export function CollectionGallery({
         </button>
       </div>
 
-      <details className="mt-8" open>
-        <summary className="cursor-pointer text-xl font-semibold mb-4 text-gray-400 hover:text-gray-600">
-          View Recent Collections ({recentCollections?.length})
+      <details className="mt-8 group" open>
+        <summary className="cursor-pointer text-xl font-medieval mb-4 text-purple-300/90 hover:text-orange-300 transition-colors duration-200 flex items-center gap-2">
+          <span className="text-orange-500/70 group-open:rotate-90 transition-transform duration-200">
+            ▶
+          </span>
+          <span className="tracking-wide">
+            View Recent Collections ({recentCollections?.length})
+          </span>
         </summary>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {recentCollections?.map((collection) => (
@@ -109,9 +114,14 @@ export function CollectionGallery({
         </div>
       </details>
 
-      <details className="mt-8">
-        <summary className="cursor-pointer text-xl font-semibold mb-4 text-gray-400 hover:text-gray-600">
-          View Older Collections ({oldCollections?.length})
+      <details className="mt-8 group">
+        <summary className="cursor-pointer text-xl font-medieval mb-4 text-purple-300/90 hover:text-orange-300 transition-colors duration-200 flex items-center gap-2">
+          <span className="text-orange-500/70 group-open:rotate-90 transition-transform duration-200">
+            ▶
+          </span>
+          <span className="tracking-wide">
+            View Older Collections ({oldCollections?.length})
+          </span>
         </summary>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 opacity-80">
           {oldCollections?.map((collection) => (
