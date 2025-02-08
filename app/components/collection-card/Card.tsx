@@ -133,8 +133,13 @@ export function CollectionCard({
         )}
       </div>
 
-      <h2 className="text-xl font-bold mb-3 text-orange-100 font-medieval tracking-wider">
-        {collection.name}
+      <h2
+        className="text-xl font-bold mb-3 text-orange-100 font-medieval tracking-wider w-full"
+        title={collection.name}
+      >
+        <div className="line-clamp-2 break-words overflow-hidden text-ellipsis max-w-[calc(100%-1rem)]">
+          {collection.name}
+        </div>
       </h2>
       <div className="space-y-2.5 text-purple-100">
         <p className="font-semibold text-orange-400 flex items-center gap-2 font-medieval">
