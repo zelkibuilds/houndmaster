@@ -4,7 +4,7 @@ export const getExplorerUrl = (chain: string, address: string) => {
     base: `https://basescan.org/address/${address}`,
     arbitrum: `https://arbiscan.io/address/${address}`,
     apechain: `https://apechain.explorer.io/address/${address}`,
-    abstract: `https://abstract.explorer.io/address/${address}`,
+    abstract: `https://abscan.org/address/${address}`,
     polygon: `https://polygonscan.com/address/${address}`,
   };
   return explorers[chain as keyof typeof explorers] || "";

@@ -17,9 +17,11 @@ export default function HoundmasterLayout() {
           <NavLink
             key={chain}
             to={`/houndmaster/${chain}`}
-            className={({ isActive }) => (isActive ? "active" : "")}
+            className={({ isActive }) =>
+              `hover:bg-blue-300 ${isActive ? "bg-blue-500" : ""}`
+            }
           >
-            <span className="px-4 py-2 mx-1 rounded-lg hover:bg-amber-400 capitalize transition-colors">
+            <span className="px-4 py-2 mx-1 capitalize transition-colors">
               {chain}
             </span>
           </NavLink>
