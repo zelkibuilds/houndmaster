@@ -1,100 +1,120 @@
-# Welcome to React Router!
+# 🐕 Houndmaster
 
-A modern, production-ready template for building full-stack React applications using React Router.
+A blockchain contract analysis tool that tracks and analyzes smart contracts across multiple chains. Think of it as your loyal companion in the world of smart contract exploration.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## 🌟 Features
 
-## Features
+- Multi-chain support (Ethereum, Base, Arbitrum, Polygon, etc.)
+- Real-time contract verification status
+- Source code and ABI retrieval
+- Rate-limited API interactions
+- Beautiful medieval-themed UI
+- Collection tracking and analysis
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+## 🛠 Tech Stack
 
-## Getting Started
+- **Frontend**: React + React Router
+- **Styling**: TailwindCSS
+- **Database**: SQLite + Drizzle ORM
+- **Runtime**: Node.js
+- **Package Manager**: pnpm
+- **Type Safety**: TypeScript
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js (v20 or higher)
+- pnpm (v8 or higher)
+- An Etherscan API key
 
 ### Installation
 
-Install the dependencies:
+1. Clone the repository:
 
-```bash
-npm install
-```
+   ```bash
+   git clone https://github.com/zelkibuilds/houndmaster.git
+   cd houndmaster
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+3. Set up environment variables:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Then edit `.env` and add your Etherscan API key.
+
+4. Set up the database:
+
+   ```bash
+   # Create data directory
+   mkdir -p data
+
+   # Generate initial migration
+   pnpm db:generate
+
+   # Apply schema to database
+   pnpm db:push
+   ```
 
 ### Development
 
-Start the development server with HMR:
+Start the development server:
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+The app will be available at `http://localhost:5173`
 
-## Building for Production
+### Available Scripts
 
-Create a production build:
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm typecheck` - Run type checking
+- `pnpm db:generate` - Generate new migrations
+- `pnpm db:push` - Apply schema changes directly (development)
+- `pnpm db:migrate` - Apply migrations (production)
+- `pnpm db:studio` - Open database GUI
 
-```bash
-npm run build
-```
+## 📝 Development Guidelines
 
-## Deployment
+### Database Operations
 
-### Docker Deployment
+- Never commit the database file (`data/sqlite.db`)
+- Use Drizzle ORM for all database operations
+- Add new queries to `queries.server.ts`
 
-This template includes three Dockerfiles optimized for different package managers:
+#### Schema Changes
 
-- `Dockerfile` - for npm
-- `Dockerfile.pnpm` - for pnpm
-- `Dockerfile.bun` - for bun
+When making schema changes:
 
-To build and run using Docker:
+1. Modify the schema in `app/lib/db/schema.ts`
+2. Run `pnpm db:generate` to create a new migration
+3. Run `pnpm db:push` to apply changes in development
+4. Commit the generated migration files
 
-```bash
-# For npm
-docker build -t my-app .
+For production deployments, use `pnpm db:migrate` instead of `db:push`.
 
-# For pnpm
-docker build -f Dockerfile.pnpm -t my-app .
+### API Rate Limits
 
-# For bun
-docker build -f Dockerfile.bun -t my-app .
+- Block explorer APIs are rate-limited to 5 requests/second
+- Use the provided `BlockExplorerAPI` class which handles rate limiting
 
-# Run the container
-docker run -p 3000:3000 my-app
-```
+### Environment Variables
 
-The containerized application can be deployed to any platform that supports Docker, including:
+Required environment variables:
 
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
+- `ETHERSCAN_API_KEY`: Your Etherscan API key
+- `DATABASE_PATH`: Path to SQLite database (default: data/sqlite.db)
 
-### DIY Deployment
+## 📄 License
 
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+MIT License - See LICENSE file for details
