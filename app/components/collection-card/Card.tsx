@@ -1,9 +1,10 @@
 import { useParams } from "react-router";
 import type { CollectionAnalysis } from "~/types/magic-eden";
 import { getExplorerUrl } from "./helpers";
-import { EtherscanIcon } from "~/icons/EtherscanIcon";
-import { TwitterIcon } from "~/icons/TwitterIcon";
-import { DiscordIcon } from "~/icons/DiscordIcon";
+import { EtherscanIcon } from "~/components/icons/EtherscanIcon";
+import { TwitterIcon } from "~/components/icons/TwitterIcon";
+import { DiscordIcon } from "~/components/icons/DiscordIcon";
+import type { Chain } from "~/config/chains";
 
 function formatToken(value: number, chain?: string): string {
   const symbol = chain === "apechain" ? "APE" : "ETH";
@@ -47,17 +48,19 @@ function getTimeSinceDeployment(deployedAt: string): string {
 
 interface CollectionCardProps {
   collection: CollectionAnalysis;
-  isSelected?: boolean;
-  onSelect?: (contractAddress: string) => void;
+  isSelected: boolean;
+  onSelect: (contractAddress: string) => void;
+  chain: Chain;
 }
 
 export function CollectionCard({
   collection,
   isSelected,
   onSelect,
+  chain,
 }: CollectionCardProps) {
   const params = useParams();
-  const chain = params.chain;
+  const symbol = chain === "apechain" ? "APE" : "ETH";
 
   const explorerUrl = collection.primaryContract
     ? getExplorerUrl(chain || "", collection.primaryContract)

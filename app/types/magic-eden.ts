@@ -1,5 +1,7 @@
+import type { Chain } from "~/config/chains";
+
 export interface AdapterConfig {
-  chain?: string;
+  chain?: Chain;
   maxAgeMonths?: number;
   minFloorPrice?: number;
   minTotalCollections?: number;

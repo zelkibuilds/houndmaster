@@ -1,7 +1,9 @@
 import type { Collection, CollectionAnalysis } from "~/types/magic-eden";
 import { useMemo, useState } from "react";
 import { CollectionCard } from "../collection-card/Card";
-import type { MagicEdenAdapter } from "~/adapters/marketplaces/magic-eden";
+import type { MagicEdenAdapter } from "~/lib/adapters/marketplaces/magic-eden";
+import type { Chain } from "~/config/chains";
+import { useParams } from "react-router";
 
 interface CollectionGalleryProps {
   recentCollections?: Collection[];
@@ -14,6 +16,7 @@ export function CollectionGallery({
   oldCollections,
   magicEdenAdapter,
 }: CollectionGalleryProps) {
+  const { chain } = useParams() as { chain: Chain };
   const [selectedContracts, setSelectedContracts] = useState<Set<string>>(
     new Set()
   );
@@ -109,6 +112,7 @@ export function CollectionGallery({
                   : false
               }
               onSelect={handleSelect}
+              chain={chain}
             />
           ))}
         </div>
@@ -134,6 +138,7 @@ export function CollectionGallery({
                   : false
               }
               onSelect={handleSelect}
+              chain={chain}
             />
           ))}
         </div>

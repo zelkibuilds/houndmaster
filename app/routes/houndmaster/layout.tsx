@@ -1,15 +1,7 @@
 import { NavLink, Outlet } from "react-router";
+import { SUPPORTED_CHAINS } from "~/config/chains";
 
 export default function HoundmasterLayout() {
-  const chains = [
-    "ethereum",
-    "base",
-    "arbitrum",
-    "apechain",
-    "abstract",
-    "polygon",
-  ];
-
   return (
     <div className="min-h-screen bg-[#1A0B26]">
       <nav
@@ -20,7 +12,7 @@ export default function HoundmasterLayout() {
           <h1 className="font-medieval text-orange-400 text-lg tracking-wider mr-4">
             Realms
           </h1>
-          {chains.map((chain) => (
+          {SUPPORTED_CHAINS.map((chain) => (
             <NavLink
               key={chain}
               to={`/houndmaster/${chain}`}
