@@ -14,7 +14,7 @@ export default [
       index("routes/houndmaster/index.tsx"),
       route(":chain", "routes/houndmaster/chain.tsx"),
     ]),
-    // API routes
-    route("api/contract-data", "routes/api/contract-data.ts"),
   ]),
+  // API routes
+  ...prefix("api", [route("/contract-data", "routes/api/contract-data.ts")]),
 ] satisfies RouteConfig;

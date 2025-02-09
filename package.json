@@ -7,9 +7,12 @@
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "drizzle-kit generate:sqlite",
     "db:migrate": "tsx ./app/lib/db/migrate.ts",
-    "db:push": "drizzle-kit push:sqlite",
+    "db:push": "drizzle-kit push",
+    "db:drop": "drizzle-kit drop",
+    "db:check": "drizzle-kit check:sqlite",
+    "db:up": "drizzle-kit up:sqlite",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

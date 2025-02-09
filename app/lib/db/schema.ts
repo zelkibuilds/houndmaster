@@ -17,9 +17,8 @@ export const contracts = sqliteTable("contracts", {
 });
 
 export const contractSourceCode = sqliteTable("contract_source_code", {
-  id: text("id").primaryKey(), // Will be contract_id
   contract_id: text("contract_id")
-    .notNull()
+    .primaryKey()
     .references(() => contracts.id),
   source_code: text("source_code").notNull(),
   constructor_arguments: text("constructor_arguments"),
@@ -28,9 +27,8 @@ export const contractSourceCode = sqliteTable("contract_source_code", {
 });
 
 export const contractAbis = sqliteTable("contract_abis", {
-  id: text("id").primaryKey(), // Will be contract_id
   contract_id: text("contract_id")
-    .notNull()
+    .primaryKey()
     .references(() => contracts.id),
   abi: text("abi").notNull(),
   fetched_at: text("fetched_at").default(sql`CURRENT_TIMESTAMP`),
