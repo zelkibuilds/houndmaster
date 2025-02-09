@@ -16,7 +16,7 @@ export const loader = async ({ params }: Route.LoaderArgs) => {
     chain: params.chain,
   });
 
-  const collections = await fetcher.fetchCollections();
+  const collections = fetcher.fetchCollections();
 
   return {
     collections,

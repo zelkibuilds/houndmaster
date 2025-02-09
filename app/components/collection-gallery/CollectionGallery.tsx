@@ -6,6 +6,7 @@ import type { MagicEdenAdapter } from "~/lib/adapters/marketplaces/magic-eden";
 import type { Chain } from "~/config/chains";
 import { useParams } from "react-router";
 import { getContractData } from "~/lib/requests/api/contract-data";
+import { getExplorerUrl } from "~/components/collection-card/helpers";
 
 interface ContractBalanceTableProps {
   contracts: ContractStatus[];
@@ -69,8 +70,15 @@ function ContractBalanceTable({
           <tbody className="divide-y divide-orange-500/20">
             {contracts.map((contract) => (
               <tr key={contract.address} className="hover:bg-orange-500/5">
-                <td className="px-6 py-4 text-sm font-mono text-purple-200">
-                  {contract.address}
+                <td className="px-6 py-4 text-sm font-mono">
+                  <a
+                    href={getExplorerUrl(chain, contract.address)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-200 hover:text-orange-300 transition-colors"
+                  >
+                    {contract.address}
+                  </a>
                 </td>
                 <td className="px-6 py-4 text-right text-sm font-medieval text-purple-200">
                   {formatBalance(contract.balance)}
@@ -137,11 +145,9 @@ export function CollectionGallery({
         contractAddresses: Array.from(selectedContracts),
         chain,
       });
-      console.log("Contract Data Response:", data);
       setContractData(data.results);
       setRequestStatus("success");
     } catch (error) {
-      console.error("Contract Data Error:", error);
       setRequestStatus("error");
     } finally {
       setIsLoading(false);
@@ -203,7 +209,7 @@ export function CollectionGallery({
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
+      <div className="space-y-4 mb-6">
         <h1 className="text-4xl font-medieval text-orange-400 tracking-wider">
           Recently Launched NFT Collections
         </h1>
@@ -212,7 +218,7 @@ export function CollectionGallery({
             type="button"
             onClick={clearSelection}
             disabled={isSelectionEmpty}
-            className={`px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+            className={`min-w-[210px] px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
               ${
                 isSelectionEmpty
                   ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
@@ -220,13 +226,15 @@ export function CollectionGallery({
               }
             `}
           >
-            Clear Selection {!isSelectionEmpty && `(${selectedContracts.size})`}
+            {isSelectionEmpty
+              ? "Clear Selection"
+              : `Clear Selection (${selectedContracts.size})`}
           </button>
           <button
             type="button"
             onClick={releaseTheHounds}
             disabled={isSelectionEmpty}
-            className={`px-6 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+            className={`min-w-[200px] px-6 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
               ${
                 isSelectionEmpty
                   ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"

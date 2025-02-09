@@ -31,9 +31,9 @@ class RateLimiter {
   private processing = false;
   private lastRequestTime = 0;
   private requestsInLastSecond = 0;
-  private readonly maxRequestsPerSecond = 4; // Reduced from 5 to 4 for safety margin
-  private readonly minRequestInterval = 250; // 1000ms / 4 requests = 250ms minimum interval
-  private readonly bufferTime = 50; // Additional buffer time between requests
+  private readonly maxRequestsPerSecond = 3; // Even more conservative
+  private readonly minRequestInterval = 350; // Increased from 250ms to 350ms
+  private readonly bufferTime = 100; // Increased buffer time
 
   async schedule<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -59,7 +59,7 @@ class RateLimiter {
     // Reset counter if more than 1 second has passed
     if (timeSinceLastRequest > 1000) {
       this.requestsInLastSecond = 0;
-      // Add a small delay after counter reset to prevent bursts
+      // Add a delay after counter reset
       await new Promise((resolve) => setTimeout(resolve, this.bufferTime));
     }
 
@@ -71,13 +71,12 @@ class RateLimiter {
     }
 
     // Always ensure minimum interval between requests
-    if (timeSinceLastRequest < this.minRequestInterval + this.bufferTime) {
-      await new Promise((resolve) =>
-        setTimeout(
-          resolve,
-          this.minRequestInterval + this.bufferTime - timeSinceLastRequest
-        )
-      );
+    const minWaitTime = Math.max(
+      this.minRequestInterval + this.bufferTime - timeSinceLastRequest,
+      0
+    );
+    if (minWaitTime > 0) {
+      await new Promise((resolve) => setTimeout(resolve, minWaitTime));
     }
 
     this.lastRequestTime = Date.now();
@@ -93,6 +92,8 @@ class RateLimiter {
       const request = this.queue.shift();
       if (request) {
         await request();
+        // Add a small delay between processing queue items
+        await new Promise((resolve) => setTimeout(resolve, this.bufferTime));
       }
     }
 
@@ -115,25 +116,22 @@ export class BlockExplorerAPI {
     endpoint: string,
     params: Record<string, string>
   ): Promise<T> {
-    return this.rateLimiter.schedule(async () => {
-      const url = new URL(endpoint, this.baseUrl);
-      url.searchParams.append("apikey", this.apiKey);
-      for (const [key, value] of Object.entries(params)) {
-        url.searchParams.append(key, value);
-      }
+    const url = new URL(endpoint, this.baseUrl);
+    url.searchParams.set("apikey", this.apiKey);
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.append(key, value);
+    }
 
-      console.info(`[Block Explorer] Making request to ${url.pathname}`);
-      const response = await fetch(url);
-      const data = await response.json();
+    const response = await fetch(url);
+    const data = await response.json();
 
-      // Check for error response first
-      const errorResult = ErrorResponseSchema.safeParse(data);
-      if (errorResult.success) {
-        throw new Error(`Block Explorer API Error: ${errorResult.data.result}`);
-      }
+    // Check for error response first
+    const errorResult = ErrorResponseSchema.safeParse(data);
+    if (errorResult.success) {
+      throw new Error(`Block Explorer API Error: ${errorResult.data.result}`);
+    }
 
-      return data as T;
-    });
+    return data as T;
   }
 
   async getSourceCode(address: string): Promise<GetSourceCodeResponse> {

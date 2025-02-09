@@ -24,10 +24,6 @@ export async function getContractData(
   request: ContractDataRequest
 ): Promise<BlockExplorerResponse> {
   try {
-    console.info(
-      `[Contract Data] Fetching data for ${request.contractAddresses.length} contracts on ${request.chain}`
-    );
-
     const response = await fetch("/api/contract-data", {
       method: "POST",
       headers: {
@@ -58,15 +54,6 @@ export async function getContractData(
     }
 
     const data = (await response.json()) as BlockExplorerResponse;
-    console.info(
-      `[Contract Data] Successfully fetched data for ${data.results.length} contracts`,
-      {
-        contractAddresses: request.contractAddresses,
-        chain: request.chain,
-        hasSourceCode: data.results.filter((r) => r.sourceCode).length,
-        hasAbi: data.results.filter((r) => r.abi).length,
-      }
-    );
 
     return data;
   } catch (error) {
