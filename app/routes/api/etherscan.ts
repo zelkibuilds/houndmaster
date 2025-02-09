@@ -2,6 +2,7 @@ import type { Route } from "./+types/etherscan";
 import { invariantResponse } from "~/lib/invariant-response/invariant-response";
 import { ERRORS } from "~/lib/errors";
 import { SUPPORTED_CHAINS, type Chain } from "~/config/chains";
+import { EthereumAddressArraySchema } from "~/lib/schemas/EthereumAddress";
 
 export async function action({ request }: Route.ActionArgs) {
   invariantResponse(request.method === "POST", {
@@ -11,7 +12,12 @@ export async function action({ request }: Route.ActionArgs) {
 
   const { contractAddresses, chain } = await request.json();
 
-  invariantResponse(contractAddresses, {
+  invariantResponse(Array.isArray(contractAddresses), {
+    status: 400,
+    message: ERRORS.ETHERSCAN.MISSING_CONTRACTS,
+  });
+
+  invariantResponse(contractAddresses.length > 0, {
     status: 400,
     message: ERRORS.ETHERSCAN.MISSING_CONTRACTS,
   });
@@ -21,16 +27,12 @@ export async function action({ request }: Route.ActionArgs) {
     message: ERRORS.ETHERSCAN.MISSING_CHAIN,
   });
 
-  invariantResponse(
-    Array.isArray(contractAddresses) &&
-      contractAddresses.every(
-        (addr) => typeof addr === "string" && /^0x[a-fA-F0-9]{40}$/.test(addr)
-      ),
-    {
-      status: 400,
-      message: ERRORS.ETHERSCAN.INVALID_CONTRACTS_FORMAT,
-    }
-  );
+  const parseAddresses =
+    EthereumAddressArraySchema.safeParse(contractAddresses);
+  invariantResponse(parseAddresses.success, {
+    status: 400,
+    message: ERRORS.ETHERSCAN.INVALID_CONTRACTS_FORMAT,
+  });
 
   invariantResponse(SUPPORTED_CHAINS.includes(chain as Chain), {
     status: 400,
