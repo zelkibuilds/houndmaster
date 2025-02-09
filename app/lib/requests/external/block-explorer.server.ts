@@ -24,35 +24,108 @@ const BLOCK_EXPLORER_URLS = {
   abstract: "https://api.abscan.org",
 } as const;
 
+class RateLimiter {
+  private queue: Array<() => Promise<void>> = [];
+  private processing = false;
+  private lastRequestTime = 0;
+  private requestsInLastSecond = 0;
+  private readonly maxRequestsPerSecond = 5;
+  private readonly minRequestInterval = 200; // 1000ms / 5 requests = 200ms minimum interval
+
+  async schedule<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          const result = await this.executeWithThrottle(fn);
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      if (!this.processing) {
+        this.processQueue();
+      }
+    });
+  }
+
+  private async executeWithThrottle<T>(fn: () => Promise<T>): Promise<T> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+
+    // Reset counter if more than 1 second has passed
+    if (timeSinceLastRequest > 1000) {
+      this.requestsInLastSecond = 0;
+    }
+
+    // If we've made too many requests, wait until the next second
+    if (this.requestsInLastSecond >= this.maxRequestsPerSecond) {
+      const waitTime = 1000 - timeSinceLastRequest;
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+      this.requestsInLastSecond = 0;
+    }
+
+    // Ensure minimum interval between requests
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest)
+      );
+    }
+
+    this.lastRequestTime = Date.now();
+    this.requestsInLastSecond++;
+
+    return fn();
+  }
+
+  private async processQueue() {
+    this.processing = true;
+
+    while (this.queue.length > 0) {
+      const request = this.queue.shift();
+      if (request) {
+        await request();
+      }
+    }
+
+    this.processing = false;
+  }
+}
+
 export class BlockExplorerAPI {
   private apiKey: string;
   private baseUrl: string;
+  private rateLimiter: RateLimiter;
 
   constructor(chain: Chain) {
     this.apiKey = ETHERSCAN_API_KEY;
     this.baseUrl = BLOCK_EXPLORER_URLS[chain];
+    this.rateLimiter = new RateLimiter();
   }
 
   private async makeRequest<T>(
     endpoint: string,
     params: Record<string, string>
-  ) {
-    const url = new URL(endpoint, this.baseUrl);
-    url.searchParams.append("apikey", this.apiKey);
-    for (const [key, value] of Object.entries(params)) {
-      url.searchParams.append(key, value);
-    }
+  ): Promise<T> {
+    return this.rateLimiter.schedule(async () => {
+      const url = new URL(endpoint, this.baseUrl);
+      url.searchParams.append("apikey", this.apiKey);
+      for (const [key, value] of Object.entries(params)) {
+        url.searchParams.append(key, value);
+      }
 
-    const response = await fetch(url);
-    const data = await response.json();
+      console.info(`[Block Explorer] Making request to ${url.pathname}`);
+      const response = await fetch(url);
+      const data = await response.json();
 
-    // Check for error response first
-    const errorResult = ErrorResponseSchema.safeParse(data);
-    if (errorResult.success) {
-      throw new Error(`Block Explorer API Error: ${errorResult.data.result}`);
-    }
+      // Check for error response first
+      const errorResult = ErrorResponseSchema.safeParse(data);
+      if (errorResult.success) {
+        throw new Error(`Block Explorer API Error: ${errorResult.data.result}`);
+      }
 
-    return data as T;
+      return data as T;
+    });
   }
 
   async getSourceCode(address: string): Promise<GetSourceCodeResponse> {
