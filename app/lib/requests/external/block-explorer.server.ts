@@ -3,10 +3,12 @@ import {
   GetSourceCodeResponseSchema,
   GetABIResponseSchema,
   GetContractCreationResponseSchema,
+  GetBalanceResponseSchema,
   ErrorResponseSchema,
   type GetSourceCodeResponse,
   type GetABIResponse,
   type GetContractCreationResponse,
+  type GetBalanceResponse,
 } from "~/lib/schemas/EtherscanResponse";
 
 if (!process.env.ETHERSCAN_API_KEY) {
@@ -29,8 +31,9 @@ class RateLimiter {
   private processing = false;
   private lastRequestTime = 0;
   private requestsInLastSecond = 0;
-  private readonly maxRequestsPerSecond = 5;
-  private readonly minRequestInterval = 200; // 1000ms / 5 requests = 200ms minimum interval
+  private readonly maxRequestsPerSecond = 4; // Reduced from 5 to 4 for safety margin
+  private readonly minRequestInterval = 250; // 1000ms / 4 requests = 250ms minimum interval
+  private readonly bufferTime = 50; // Additional buffer time between requests
 
   async schedule<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -56,19 +59,24 @@ class RateLimiter {
     // Reset counter if more than 1 second has passed
     if (timeSinceLastRequest > 1000) {
       this.requestsInLastSecond = 0;
+      // Add a small delay after counter reset to prevent bursts
+      await new Promise((resolve) => setTimeout(resolve, this.bufferTime));
     }
 
     // If we've made too many requests, wait until the next second
     if (this.requestsInLastSecond >= this.maxRequestsPerSecond) {
-      const waitTime = 1000 - timeSinceLastRequest;
+      const waitTime = 1000 - timeSinceLastRequest + this.bufferTime;
       await new Promise((resolve) => setTimeout(resolve, waitTime));
       this.requestsInLastSecond = 0;
     }
 
-    // Ensure minimum interval between requests
-    if (timeSinceLastRequest < this.minRequestInterval) {
+    // Always ensure minimum interval between requests
+    if (timeSinceLastRequest < this.minRequestInterval + this.bufferTime) {
       await new Promise((resolve) =>
-        setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest)
+        setTimeout(
+          resolve,
+          this.minRequestInterval + this.bufferTime - timeSinceLastRequest
+        )
       );
     }
 
@@ -170,6 +178,22 @@ export class BlockExplorerAPI {
     const parseResult = GetContractCreationResponseSchema.safeParse(data);
     if (!parseResult.success) {
       throw new Error("Invalid response format from getContractCreation");
+    }
+
+    return parseResult.data;
+  }
+
+  async getBalance(address: string): Promise<GetBalanceResponse> {
+    const data = await this.makeRequest<GetBalanceResponse>("/api", {
+      module: "account",
+      action: "balance",
+      address,
+      tag: "latest",
+    });
+
+    const parseResult = GetBalanceResponseSchema.safeParse(data);
+    if (!parseResult.success) {
+      throw new Error("Invalid response format from getBalance");
     }
 
     return parseResult.data;

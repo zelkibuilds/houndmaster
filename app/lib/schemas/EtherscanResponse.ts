@@ -44,6 +44,11 @@ export const GetContractCreationResponseSchema =
     result: z.array(ContractCreationSchema),
   });
 
+// Balance response
+export const GetBalanceResponseSchema = EtherscanBaseResponseSchema.extend({
+  result: z.string(), // Balance in wei
+});
+
 // Error response
 export const ErrorResponseSchema = z.object({
   status: z.literal("0"),
@@ -58,4 +63,5 @@ export type GetABIResponse = z.infer<typeof GetABIResponseSchema>;
 export type GetContractCreationResponse = z.infer<
   typeof GetContractCreationResponseSchema
 >;
+export type GetBalanceResponse = z.infer<typeof GetBalanceResponseSchema>;
 export type EtherscanErrorResponse = z.infer<typeof ErrorResponseSchema>;

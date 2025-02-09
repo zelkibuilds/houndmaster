@@ -60,6 +60,7 @@ export async function action({ request }: Route.ActionArgs) {
 
       let sourceCode = contract?.sourceCode?.source_code;
       let abi = contract?.abi?.abi;
+      let balance: string | undefined;
 
       // Fetch source code if missing
       if (!sourceCode) {
@@ -92,11 +93,22 @@ export async function action({ request }: Route.ActionArgs) {
         }
       }
 
+      // Fetch current balance
+      try {
+        const balanceResponse = await blockExplorer.getBalance(address);
+        if (balanceResponse.status === "1") {
+          balance = balanceResponse.result;
+        }
+      } catch (error) {
+        console.error(`Failed to fetch balance for ${address}:`, error);
+      }
+
       return {
         address,
         sourceCode,
         abi,
         lastVerified: contract?.verified_at?.toString(),
+        balance,
       };
     })
   );

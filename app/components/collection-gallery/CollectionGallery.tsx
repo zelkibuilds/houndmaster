@@ -1,10 +1,88 @@
 import type { Collection, CollectionAnalysis } from "~/types/magic-eden";
+import type { ContractStatus } from "~/types/block-explorer";
 import { useMemo, useState } from "react";
 import { CollectionCard } from "../collection-card/Card";
 import type { MagicEdenAdapter } from "~/lib/adapters/marketplaces/magic-eden";
 import type { Chain } from "~/config/chains";
 import { useParams } from "react-router";
 import { getContractData } from "~/lib/requests/api/contract-data";
+
+interface ContractBalanceTableProps {
+  contracts: ContractStatus[];
+  chain: Chain;
+  onBack: () => void;
+}
+
+function ContractBalanceTable({
+  contracts,
+  chain,
+  onBack,
+}: ContractBalanceTableProps) {
+  function formatBalance(balanceWei: string | undefined): string {
+    if (!balanceWei) return "0.0000";
+
+    // Convert wei to ETH (18 decimals)
+    const balanceEth = Number(balanceWei) / 1e18;
+
+    // Format with full precision and thousand separators
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 18,
+      useGrouping: true,
+    }).format(balanceEth);
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-medieval text-orange-400">
+          Contract Balances
+        </h2>
+        <button
+          type="button"
+          onClick={onBack}
+          className="px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+            bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 
+            hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
+        >
+          Return to the Hunt
+        </button>
+      </div>
+      <div className="overflow-hidden rounded-lg border-2 border-orange-500/20 bg-[#1A0B26]">
+        <table className="min-w-full divide-y divide-orange-500/20">
+          <thead className="bg-orange-500/10">
+            <tr>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-sm font-medieval text-orange-300"
+              >
+                Contract Address
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-right text-sm font-medieval text-orange-300"
+              >
+                Balance ({chain === "apechain" ? "APE" : "ETH"})
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-orange-500/20">
+            {contracts.map((contract) => (
+              <tr key={contract.address} className="hover:bg-orange-500/5">
+                <td className="px-6 py-4 text-sm font-mono text-purple-200">
+                  {contract.address}
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-medieval text-purple-200">
+                  {formatBalance(contract.balance)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 interface CollectionGalleryProps {
   recentCollections?: Collection[];
@@ -25,6 +103,7 @@ export function CollectionGallery({
   const [requestStatus, setRequestStatus] = useState<
     "idle" | "success" | "error"
   >("idle");
+  const [contractData, setContractData] = useState<ContractStatus[]>([]);
 
   const handleSelect = (contractAddress: string) => {
     setSelectedContracts((prev) => {
@@ -44,6 +123,12 @@ export function CollectionGallery({
     setSelectedContracts(new Set());
   };
 
+  const resetState = () => {
+    setContractData([]);
+    setRequestStatus("idle");
+    clearSelection();
+  };
+
   const releaseTheHounds = async () => {
     setIsLoading(true);
     setRequestStatus("idle");
@@ -53,6 +138,7 @@ export function CollectionGallery({
         chain,
       });
       console.log("Contract Data Response:", data);
+      setContractData(data.results);
       setRequestStatus("success");
     } catch (error) {
       console.error("Contract Data Error:", error);
@@ -101,6 +187,17 @@ export function CollectionGallery({
         </div>
         <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  // Show contract data table if we have results
+  if (contractData.length > 0) {
+    return (
+      <ContractBalanceTable
+        contracts={contractData}
+        chain={chain}
+        onBack={resetState}
+      />
     );
   }
 
