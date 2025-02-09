@@ -26,14 +26,15 @@ const BLOCK_EXPLORER_URLS = {
   abstract: "https://api.abscan.org",
 } as const;
 
-class RateLimiter {
+// Singleton rate limiter to handle all requests across instances
+const globalRateLimiter = new (class RateLimiter {
   private queue: Array<() => Promise<void>> = [];
   private processing = false;
   private lastRequestTime = 0;
-  private requestsInLastSecond = 0;
-  private readonly maxRequestsPerSecond = 3; // Even more conservative
-  private readonly minRequestInterval = 350; // Increased from 250ms to 350ms
-  private readonly bufferTime = 100; // Increased buffer time
+  private requestCount = 0;
+  private readonly maxRequestsPerSecond = 4;
+  private readonly minInterval = 250; // 1000ms / 4 requests
+  private currentSecondStart = Date.now();
 
   async schedule<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -46,92 +47,92 @@ class RateLimiter {
         }
       });
 
-      if (!this.processing) {
-        this.processQueue();
-      }
+      void this.processQueue();
     });
   }
 
   private async executeWithThrottle<T>(fn: () => Promise<T>): Promise<T> {
     const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
 
-    // Reset counter if more than 1 second has passed
-    if (timeSinceLastRequest > 1000) {
-      this.requestsInLastSecond = 0;
-      // Add a delay after counter reset
-      await new Promise((resolve) => setTimeout(resolve, this.bufferTime));
+    // Check if we're in a new second
+    if (now - this.currentSecondStart >= 1000) {
+      this.currentSecondStart = now;
+      this.requestCount = 0;
     }
 
-    // If we've made too many requests, wait until the next second
-    if (this.requestsInLastSecond >= this.maxRequestsPerSecond) {
-      const waitTime = 1000 - timeSinceLastRequest + this.bufferTime;
+    // If we've hit the limit, wait for next second
+    if (this.requestCount >= this.maxRequestsPerSecond) {
+      const waitTime = 1000 - (now - this.currentSecondStart);
       await new Promise((resolve) => setTimeout(resolve, waitTime));
-      this.requestsInLastSecond = 0;
+      this.currentSecondStart = Date.now();
+      this.requestCount = 0;
     }
 
-    // Always ensure minimum interval between requests
-    const minWaitTime = Math.max(
-      this.minRequestInterval + this.bufferTime - timeSinceLastRequest,
-      0
-    );
-    if (minWaitTime > 0) {
-      await new Promise((resolve) => setTimeout(resolve, minWaitTime));
+    // Ensure minimum interval between requests
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    if (timeSinceLastRequest < this.minInterval) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, this.minInterval - timeSinceLastRequest)
+      );
     }
 
     this.lastRequestTime = Date.now();
-    this.requestsInLastSecond++;
+    this.requestCount++;
 
     return fn();
   }
 
   private async processQueue() {
-    this.processing = true;
+    if (this.processing) return;
 
-    while (this.queue.length > 0) {
-      const request = this.queue.shift();
-      if (request) {
-        await request();
-        // Add a small delay between processing queue items
-        await new Promise((resolve) => setTimeout(resolve, this.bufferTime));
+    this.processing = true;
+    try {
+      while (this.queue.length > 0) {
+        const request = this.queue.shift();
+        if (request) {
+          await request();
+        }
+      }
+    } finally {
+      this.processing = false;
+      if (this.queue.length > 0) {
+        void this.processQueue();
       }
     }
-
-    this.processing = false;
   }
-}
+})();
 
 export class BlockExplorerAPI {
   private apiKey: string;
   private baseUrl: string;
-  private rateLimiter: RateLimiter;
 
   constructor(chain: Chain) {
     this.apiKey = ETHERSCAN_API_KEY;
     this.baseUrl = BLOCK_EXPLORER_URLS[chain];
-    this.rateLimiter = new RateLimiter();
   }
 
   private async makeRequest<T>(
     endpoint: string,
     params: Record<string, string>
   ): Promise<T> {
-    const url = new URL(endpoint, this.baseUrl);
-    url.searchParams.set("apikey", this.apiKey);
-    for (const [key, value] of Object.entries(params)) {
-      url.searchParams.append(key, value);
-    }
+    return globalRateLimiter.schedule(async () => {
+      const url = new URL(endpoint, this.baseUrl);
+      url.searchParams.set("apikey", this.apiKey);
+      for (const [key, value] of Object.entries(params)) {
+        url.searchParams.append(key, value);
+      }
 
-    const response = await fetch(url);
-    const data = await response.json();
+      const response = await fetch(url);
+      const data = await response.json();
 
-    // Check for error response first
-    const errorResult = ErrorResponseSchema.safeParse(data);
-    if (errorResult.success) {
-      throw new Error(`Block Explorer API Error: ${errorResult.data.result}`);
-    }
+      // Check for error response first
+      const errorResult = ErrorResponseSchema.safeParse(data);
+      if (errorResult.success) {
+        throw new Error(`Block Explorer API Error: ${errorResult.data.result}`);
+      }
 
-    return data as T;
+      return data as T;
+    });
   }
 
   async getSourceCode(address: string): Promise<GetSourceCodeResponse> {
