@@ -56,7 +56,6 @@ export async function insertSourceCode(
 ) {
   const contractId = getContractId(address, chain);
   return db.insert(contractSourceCode).values({
-    id: contractId,
     contract_id: contractId,
     ...data,
   });
@@ -65,7 +64,6 @@ export async function insertSourceCode(
 export async function insertABI(address: string, chain: Chain, abi: string) {
   const contractId = getContractId(address, chain);
   return db.insert(contractAbis).values({
-    id: contractId,
     contract_id: contractId,
     abi,
   });
