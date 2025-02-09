@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "./drizzle.server";
 import { contracts, contractSourceCode, contractAbis } from "./schema";
 import type { Chain } from "~/config/chains";

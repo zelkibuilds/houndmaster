@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { relations } from "drizzle-orm";
 
 export const contracts = sqliteTable("contracts", {
   id: text("id").primaryKey(), // Will be address_chain
@@ -35,8 +36,33 @@ export const contractAbis = sqliteTable("contract_abis", {
   fetched_at: text("fetched_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const contractRelations = relations(contracts, ({ one }) => ({
+  sourceCode: one(contractSourceCode),
+  abi: one(contractAbis),
+}));
+
+export const contractSourceCodeRelations = relations(
+  contractSourceCode,
+  ({ one }) => ({
+    contract: one(contracts, {
+      fields: [contractSourceCode.contract_id],
+      references: [contracts.id],
+    }),
+  })
+);
+
+export const contractAbisRelations = relations(contractAbis, ({ one }) => ({
+  contract: one(contracts, {
+    fields: [contractAbis.contract_id],
+    references: [contracts.id],
+  }),
+}));
+
 // Types
-export type Contract = typeof contracts.$inferSelect;
+export type Contract = typeof contracts.$inferSelect & {
+  sourceCode?: ContractSourceCode;
+  abi?: ContractAbi;
+};
 export type NewContract = typeof contracts.$inferInsert;
 
 export type ContractSourceCode = typeof contractSourceCode.$inferSelect;

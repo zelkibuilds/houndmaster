@@ -1,10 +1,7 @@
-import type { ActionFunctionArgs } from "react-router";
-
 export interface ContractStatus {
   address: string;
-  hasContract: boolean;
-  hasSourceCode: boolean;
-  hasAbi: boolean;
+  sourceCode?: string;
+  abi?: string;
   lastVerified?: string;
 }
 
