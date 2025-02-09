@@ -15,6 +15,6 @@ export default [
       route(":chain", "routes/houndmaster/chain.tsx"),
     ]),
     // API routes
-    route("api/etherscan", "routes/api/etherscan.ts"),
+    route("api/contract-data", "routes/api/contract-data.ts"),
   ]),
 ] satisfies RouteConfig;

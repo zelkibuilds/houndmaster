@@ -3,9 +3,13 @@ import { db } from "./drizzle.server";
 import { contracts, contractSourceCode, contractAbis } from "./schema";
 import type { Chain } from "~/config/chains";
 
+function getContractId(address: string, chain: Chain): string {
+  return `${address}_${chain}`;
+}
+
 export async function getContract(address: string, chain: Chain) {
   return db.query.contracts.findFirst({
-    where: and(eq(contracts.address, address), eq(contracts.chain, chain)),
+    where: eq(contracts.id, getContractId(address, chain)),
     with: {
       sourceCode: true,
       abi: true,
@@ -16,7 +20,7 @@ export async function getContract(address: string, chain: Chain) {
 export async function getContractsByChain(chain: Chain) {
   return db.query.contracts.findMany({
     where: eq(contracts.chain, chain),
-    orderBy: contracts.verifiedAt,
+    orderBy: contracts.verified_at,
   });
 }
 
@@ -25,15 +29,16 @@ export async function insertContract(
   chain: Chain,
   data: {
     name?: string;
-    compilerVersion?: string;
-    optimizationUsed?: boolean;
+    compiler_version?: string;
+    optimization_used?: boolean;
     runs?: number;
-    licenseType?: string;
-    isProxy?: boolean;
-    implementationAddress?: string;
+    license_type?: string;
+    is_proxy?: boolean;
+    implementation_address?: string;
   }
 ) {
   return db.insert(contracts).values({
+    id: getContractId(address, chain),
     address,
     chain,
     ...data,
@@ -41,29 +46,27 @@ export async function insertContract(
 }
 
 export async function insertSourceCode(
-  contractAddress: string,
+  address: string,
   chain: Chain,
   data: {
-    sourceCode: string;
-    constructorArguments?: string;
-    evmVersion?: string;
+    source_code: string;
+    constructor_arguments?: string;
+    evm_version?: string;
   }
 ) {
+  const contractId = getContractId(address, chain);
   return db.insert(contractSourceCode).values({
-    contractAddress,
-    chain,
+    id: contractId,
+    contract_id: contractId,
     ...data,
   });
 }
 
-export async function insertABI(
-  contractAddress: string,
-  chain: Chain,
-  abi: string
-) {
+export async function insertABI(address: string, chain: Chain, abi: string) {
+  const contractId = getContractId(address, chain);
   return db.insert(contractAbis).values({
-    contractAddress,
-    chain,
+    id: contractId,
+    contract_id: contractId,
     abi,
   });
 }

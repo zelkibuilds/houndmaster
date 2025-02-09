@@ -1,0 +1,6 @@
+- Do not use .server files outside of actions and loaders
+- Do not create type files under +types directories
+- remix/react-router dependencies should be imported from the react-router dependency
+- if you run into dependency issues ask for my input
+- use the already existing queries in queries.server.ts when using drizzle
+- if you need to perform a query that does not exist ask me if I want it added to queries.server.ts
