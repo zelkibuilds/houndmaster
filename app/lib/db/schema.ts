@@ -34,9 +34,32 @@ export const contractAbis = pgTable("contract_abis", {
   fetched_at: timestamp("fetched_at").defaultNow(),
 });
 
+export const websiteAnalysis = pgTable("website_analysis", {
+  contract_id: text("contract_id")
+    .primaryKey()
+    .references(() => contracts.id),
+  project_description: text("project_description"),
+  roadmap: text("roadmap"),
+  services_analysis: text("services_analysis"),
+  confidence: text("confidence").notNull(),
+  analyzed_at: timestamp("analyzed_at").defaultNow(),
+  source_urls: text("source_urls").notNull(),
+  raw_content: text("raw_content").notNull(),
+});
+
 export const contractRelations = relations(contracts, ({ one }) => ({
-  sourceCode: one(contractSourceCode),
-  abi: one(contractAbis),
+  sourceCode: one(contractSourceCode, {
+    fields: [contracts.id],
+    references: [contractSourceCode.contract_id],
+  }),
+  abi: one(contractAbis, {
+    fields: [contracts.id],
+    references: [contractAbis.contract_id],
+  }),
+  websiteAnalysis: one(websiteAnalysis, {
+    fields: [contracts.id],
+    references: [websiteAnalysis.contract_id],
+  }),
 }));
 
 export const contractSourceCodeRelations = relations(

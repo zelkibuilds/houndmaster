@@ -3,6 +3,7 @@ import type { Chain } from "~/config/chains";
 interface OnChainAnalysisRequest {
   address: string;
   chain: Chain;
+  websiteUrl?: string;
 }
 
 export interface MintAnalysisResult {
@@ -13,11 +14,27 @@ export interface MintAnalysisResult {
   missingInfo?: string[];
   mintCount?: number;
   averageMintPrice?: string | null;
+  websiteAnalysis?: {
+    project_description: string;
+    roadmap: string | null;
+    services_analysis: string;
+    confidence: "high" | "medium" | "low";
+  };
 }
 
 interface ErrorResponse {
   error: string;
   details?: string;
+}
+
+interface ProjectAnalysisResponse {
+  contractAnalysis: MintAnalysisResult;
+  websiteAnalysis?: {
+    project_description: string;
+    roadmap: string | null;
+    services_analysis: string;
+    confidence: "high" | "medium" | "low";
+  };
 }
 
 class OnChainAnalysisError extends Error {
@@ -65,7 +82,12 @@ export async function analyzeMintRevenueForContract(
       throw new OnChainAnalysisError(errorMessage, response.status);
     }
 
-    return response.json();
+    const { contractAnalysis, websiteAnalysis } =
+      (await response.json()) as ProjectAnalysisResponse;
+    return {
+      ...contractAnalysis,
+      websiteAnalysis,
+    };
   } catch (error) {
     if (error instanceof OnChainAnalysisError) {
       throw error;

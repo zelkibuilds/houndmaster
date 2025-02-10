@@ -10,6 +10,7 @@ const ERRORS = {
   MISSING_CHAIN: "Chain parameter is required",
   INVALID_ADDRESS: "Invalid Ethereum address format",
   INVALID_CHAIN: "Invalid chain specified",
+  INVALID_URL: "Invalid website URL format",
 } as const;
 
 export async function action({ request }: Route.ActionArgs) {
@@ -19,7 +20,7 @@ export async function action({ request }: Route.ActionArgs) {
   });
 
   const body = await request.json();
-  const { address, chain, projectName } = body;
+  const { address, chain, websiteUrl } = body;
 
   invariantResponse(address, {
     status: 400,
@@ -42,11 +43,23 @@ export async function action({ request }: Route.ActionArgs) {
     message: ERRORS.INVALID_CHAIN,
   });
 
+  // Validate URL if provided
+  if (websiteUrl) {
+    try {
+      new URL(websiteUrl);
+    } catch {
+      invariantResponse(false, {
+        status: 400,
+        message: ERRORS.INVALID_URL,
+      });
+    }
+  }
+
   try {
     const analysis = await analyzeMintRevenue(
       address as `0x${string}`,
       chain,
-      projectName
+      websiteUrl
     );
     return new Response(JSON.stringify(analysis), {
       status: 200,

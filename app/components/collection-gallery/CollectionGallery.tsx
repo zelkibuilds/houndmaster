@@ -26,6 +26,65 @@ function formatSourceCode(sourceCode: string | undefined): string {
   }
 }
 
+interface WebsiteAnalysis {
+  project_description: string;
+  roadmap: string | null;
+  services_analysis: string;
+  confidence: "high" | "medium" | "low";
+}
+
+interface AnalysisModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  analysis: WebsiteAnalysis;
+}
+
+function AnalysisModal({ isOpen, onClose, analysis }: AnalysisModalProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-purple-900/90 border-2 border-purple-500/50 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-xl font-medieval text-orange-300">
+            Project Analysis
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-purple-300 hover:text-orange-300 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-orange-300 font-medium mb-2">
+              Project Description
+            </h4>
+            <p className="text-purple-200">{analysis.project_description}</p>
+          </div>
+          {analysis.roadmap && (
+            <div>
+              <h4 className="text-orange-300 font-medium mb-2">Roadmap</h4>
+              <p className="text-purple-200">{analysis.roadmap}</p>
+            </div>
+          )}
+          <div>
+            <h4 className="text-orange-300 font-medium mb-2">
+              Recommended Services
+            </h4>
+            <p className="text-purple-200">{analysis.services_analysis}</p>
+          </div>
+          <div className="text-sm text-purple-300/70">
+            Analysis Confidence: {analysis.confidence}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ContractBalanceTable({
   contracts,
   chain,
@@ -39,6 +98,13 @@ function ContractBalanceTable({
   const [analyzingContracts, setAnalyzingContracts] = useState<Set<string>>(
     new Set()
   );
+  const [selectedAnalysis, setSelectedAnalysis] = useState<{
+    isOpen: boolean;
+    analysis: WebsiteAnalysis | null;
+  }>({
+    isOpen: false,
+    analysis: null,
+  });
 
   // Split contracts into three categories based on analysis results
   const { pending, analyzed, failed } = useMemo(() => {
@@ -94,7 +160,12 @@ function ContractBalanceTable({
   const analyzeContract = async (address: string) => {
     setAnalyzingContracts((prev) => new Set(prev).add(address));
     try {
-      const result = await analyzeMintRevenueForContract({ address, chain });
+      const collection = contractToCollection.get(address);
+      const result = await analyzeMintRevenueForContract({
+        address,
+        chain,
+        websiteUrl: collection?.externalUrl,
+      });
       setAnalysisResults((prev) => ({ ...prev, [address]: result }));
     } catch (error) {
       console.error("Failed to analyze contract:", error);
@@ -127,6 +198,9 @@ function ContractBalanceTable({
           </th>
           <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
             Mint Analysis
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
+            Project Analysis
           </th>
           <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
             Actions
@@ -203,6 +277,39 @@ function ContractBalanceTable({
                   </button>
                 )}
               </td>
+              <td className="px-6 py-4">
+                {analyzingContracts.has(contract.address) ? (
+                  <div className="flex items-center gap-2 text-orange-300">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-400" />
+                    <span>Analyzing...</span>
+                  </div>
+                ) : analysisResults[contract.address]?.websiteAnalysis
+                    ?.project_description ===
+                    "No content available for analysis" ||
+                  analysisResults[contract.address]?.websiteAnalysis
+                    ?.project_description === "Failed to analyze content" ? (
+                  <div className="text-sm text-purple-300/70">---</div>
+                ) : analysisResults[contract.address]?.websiteAnalysis ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const analysis =
+                        analysisResults[contract.address]?.websiteAnalysis;
+                      if (analysis) {
+                        setSelectedAnalysis({
+                          isOpen: true,
+                          analysis,
+                        });
+                      }
+                    }}
+                    className="px-3 py-1 bg-purple-800/50 hover:bg-purple-700/50 text-purple-200 rounded border border-purple-600/50 transition-colors"
+                  >
+                    View Analysis
+                  </button>
+                ) : (
+                  <div className="text-sm text-purple-300/70">---</div>
+                )}
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
                   type="button"
@@ -268,7 +375,7 @@ function ContractBalanceTable({
       </div>
 
       {pending.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="w-full">
           <h2 className="text-xl font-medieval text-orange-300 mb-4 flex items-center gap-3">
             Contracts Pending Analysis
             {analyzingContracts.size > 0 && (
@@ -283,7 +390,7 @@ function ContractBalanceTable({
       )}
 
       {analyzed.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="w-full">
           <h2 className="text-xl font-medieval text-orange-300 mb-4">
             Analyzed Contracts
           </h2>
@@ -292,12 +399,20 @@ function ContractBalanceTable({
       )}
 
       {failed.length > 0 && (
-        <div className="overflow-x-auto opacity-75">
+        <div className="w-full opacity-75">
           <h2 className="text-xl font-medieval text-orange-300 mb-4">
             Analysis Failed
           </h2>
           {renderContractTable(failed)}
         </div>
+      )}
+
+      {selectedAnalysis.analysis && (
+        <AnalysisModal
+          isOpen={selectedAnalysis.isOpen}
+          onClose={() => setSelectedAnalysis({ isOpen: false, analysis: null })}
+          analysis={selectedAnalysis.analysis}
+        />
       )}
     </div>
   );
@@ -323,6 +438,17 @@ export function CollectionGallery({
     "idle" | "success" | "error"
   >("idle");
   const [contractData, setContractData] = useState<ContractStatus[]>([]);
+  const [showOnlyWithWebsite, setShowOnlyWithWebsite] = useState(false);
+
+  const filteredRecentCollections = useMemo(() => {
+    if (!showOnlyWithWebsite) return recentCollections;
+    return recentCollections?.filter((collection) => collection.externalUrl);
+  }, [recentCollections, showOnlyWithWebsite]);
+
+  const filteredOldCollections = useMemo(() => {
+    if (!showOnlyWithWebsite) return oldCollections;
+    return oldCollections?.filter((collection) => collection.externalUrl);
+  }, [oldCollections, showOnlyWithWebsite]);
 
   const handleSelect = (contractAddress: string) => {
     setSelectedContracts((prev) => {
@@ -407,7 +533,6 @@ export function CollectionGallery({
     );
   }
 
-  // Show contract data table if we have results
   if (contractData.length > 0) {
     return (
       <ContractBalanceTable
@@ -425,7 +550,7 @@ export function CollectionGallery({
         <h1 className="text-4xl font-medieval text-orange-400 tracking-wider">
           Recently Launched NFT Collections
         </h1>
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-wrap">
           <button
             type="button"
             onClick={clearSelection}
@@ -456,6 +581,20 @@ export function CollectionGallery({
           >
             Release the Hounds
           </button>
+          <button
+            type="button"
+            onClick={() => setShowOnlyWithWebsite((prev) => !prev)}
+            className={`min-w-[200px] px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+              ${
+                showOnlyWithWebsite
+                  ? "bg-orange-500/20 text-orange-300 border-orange-500/50"
+                  : "bg-purple-900/30 text-purple-300/70 border-purple-700/50"
+              } hover:bg-orange-500/30 hover:text-orange-200 hover:border-orange-400`}
+          >
+            {showOnlyWithWebsite
+              ? "Show All Collections"
+              : "Show Only With Websites"}
+          </button>
         </div>
       </div>
 
@@ -479,11 +618,11 @@ export function CollectionGallery({
             ▶
           </span>
           <span className="tracking-wide">
-            View Recent Collections ({recentCollections?.length})
+            View Recent Collections ({filteredRecentCollections?.length})
           </span>
         </summary>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {recentCollections?.map((collection) => (
+          {filteredRecentCollections?.map((collection) => (
             <CollectionCard
               key={collection.name}
               collection={magicEdenAdapter.formatCollectionData(collection)}
@@ -505,11 +644,11 @@ export function CollectionGallery({
             ▶
           </span>
           <span className="tracking-wide">
-            View Older Collections ({oldCollections?.length})
+            View Older Collections ({filteredOldCollections?.length})
           </span>
         </summary>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 opacity-80">
-          {oldCollections?.map((collection) => (
+          {filteredOldCollections?.map((collection) => (
             <CollectionCard
               key={collection.name}
               collection={magicEdenAdapter.formatCollectionData(collection)}

@@ -8,6 +8,7 @@ import {
   getContractEvents,
 } from "./contract-interactions.server";
 import { getContractData } from "~/lib/requests/api/contract-data";
+import { analyzeWebsite } from "./website-scraper.server";
 
 const genAI = google("gemini-2.0-flash-001");
 
@@ -17,10 +18,17 @@ type MintAnalysisResult = {
   confidence: "high" | "medium" | "low";
   explanation: string;
   missingInfo?: string[];
-  roadmap?: {
-    summary: string;
+  mintCount?: number;
+  averageMintPrice?: string | null;
+};
+
+type ProjectAnalysisResult = {
+  contractAnalysis: MintAnalysisResult;
+  websiteAnalysis?: {
+    project_description: string;
+    roadmap: string | null;
+    services_analysis: string;
     confidence: "high" | "medium" | "low";
-    source?: string;
   };
 };
 
@@ -169,63 +177,26 @@ async function findPriceInDependencies(
 export async function analyzeMintRevenue(
   address: Address,
   chain: Chain,
-  projectName?: string
-): Promise<MintAnalysisResult> {
-  // 1. First try to analyze from contract source code
-  const contract = await getContract(address, chain);
-  if (!contract?.sourceCode || !contract.abi) {
-    return {
-      totalRaised: null,
-      currency: null,
-      confidence: "low",
-      explanation: "No verified source code or ABI found",
-      missingInfo: ["verified contract source code", "contract ABI"],
-    };
-  }
+  projectUrl?: string
+): Promise<ProjectAnalysisResult> {
+  // Run contract analysis
+  const contractAnalysis = await analyzeContract(address, chain);
 
-  // Get initial analysis
-  const baseAnalysis = await analyzeContract(address, chain);
-
-  // If we have a project name, try to find roadmap info
-  if (projectName) {
-    const roadmapPrompt = `
-      Find the latest roadmap or development plans for the NFT project "${projectName}" on ${chain} blockchain.
-      Focus on:
-      1. Future development plans
-      2. Utility plans
-      3. Community benefits
-      4. Recent updates
-      
-      Format your response as JSON:
-      {
-        "summary": string,
-        "confidence": "high" | "medium" | "low",
-        "source": string | null
-      }
-
-      Return ONLY the JSON, no other text.
-    `;
-
+  // If we have a project URL, run website analysis in parallel
+  let websiteAnalysis: ProjectAnalysisResult["websiteAnalysis"];
+  if (projectUrl) {
     try {
-      const { text: roadmapResponse } = await generateText({
-        model: genAI,
-        prompt: roadmapPrompt,
-      });
-
-      const roadmapAnalysis = JSON.parse(
-        extractJsonFromMarkdown(roadmapResponse)
-      );
-      return {
-        ...baseAnalysis,
-        roadmap: roadmapAnalysis,
-      };
+      const contractId = `${address}_${chain}`;
+      websiteAnalysis = await analyzeWebsite(contractId, projectUrl, chain);
     } catch (error) {
-      console.error("Failed to fetch roadmap info:", error);
-      return baseAnalysis;
+      console.error("Failed to analyze website:", error);
     }
   }
 
-  return baseAnalysis;
+  return {
+    contractAnalysis,
+    websiteAnalysis,
+  };
 }
 
 // Move existing analyzeMintRevenue logic to this function

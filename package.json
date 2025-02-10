@@ -25,6 +25,7 @@
     "drizzle-orm": "^0.39.2",
     "isbot": "^5.1.17",
     "pg": "^8.11.3",
+    "playwright": "^1.42.1",
     "postgres": "^3.4.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
