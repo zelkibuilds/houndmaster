@@ -19,7 +19,7 @@ export async function action({ request }: Route.ActionArgs) {
   });
 
   const body = await request.json();
-  const { address, chain } = body;
+  const { address, chain, projectName } = body;
 
   invariantResponse(address, {
     status: 400,
@@ -43,7 +43,11 @@ export async function action({ request }: Route.ActionArgs) {
   });
 
   try {
-    const analysis = await analyzeMintRevenue(address as `0x${string}`, chain);
+    const analysis = await analyzeMintRevenue(
+      address as `0x${string}`,
+      chain,
+      projectName
+    );
     return new Response(JSON.stringify(analysis), {
       status: 200,
       headers: {

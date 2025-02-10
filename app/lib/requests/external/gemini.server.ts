@@ -17,6 +17,11 @@ type MintAnalysisResult = {
   confidence: "high" | "medium" | "low";
   explanation: string;
   missingInfo?: string[];
+  roadmap?: {
+    summary: string;
+    confidence: "high" | "medium" | "low";
+    source?: string;
+  };
 };
 
 function extractJsonFromMarkdown(text: string): string {
@@ -162,6 +167,69 @@ async function findPriceInDependencies(
 }
 
 export async function analyzeMintRevenue(
+  address: Address,
+  chain: Chain,
+  projectName?: string
+): Promise<MintAnalysisResult> {
+  // 1. First try to analyze from contract source code
+  const contract = await getContract(address, chain);
+  if (!contract?.sourceCode || !contract.abi) {
+    return {
+      totalRaised: null,
+      currency: null,
+      confidence: "low",
+      explanation: "No verified source code or ABI found",
+      missingInfo: ["verified contract source code", "contract ABI"],
+    };
+  }
+
+  // Get initial analysis
+  const baseAnalysis = await analyzeContract(address, chain);
+
+  // If we have a project name, try to find roadmap info
+  if (projectName) {
+    const roadmapPrompt = `
+      Find the latest roadmap or development plans for the NFT project "${projectName}" on ${chain} blockchain.
+      Focus on:
+      1. Future development plans
+      2. Utility plans
+      3. Community benefits
+      4. Recent updates
+      
+      Format your response as JSON:
+      {
+        "summary": string,
+        "confidence": "high" | "medium" | "low",
+        "source": string | null
+      }
+
+      Return ONLY the JSON, no other text.
+    `;
+
+    try {
+      const { text: roadmapResponse } = await generateText({
+        model: genAI,
+        prompt: roadmapPrompt,
+      });
+
+      const roadmapAnalysis = JSON.parse(
+        extractJsonFromMarkdown(roadmapResponse)
+      );
+      return {
+        ...baseAnalysis,
+        roadmap: roadmapAnalysis,
+      };
+    } catch (error) {
+      console.error("Failed to fetch roadmap info:", error);
+      return baseAnalysis;
+    }
+  }
+
+  return baseAnalysis;
+}
+
+// Move existing analyzeMintRevenue logic to this function
+async function analyzeContract(
   address: Address,
   chain: Chain
 ): Promise<MintAnalysisResult> {
