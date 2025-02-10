@@ -190,14 +190,19 @@ async function analyzeContent(content: string) {
     "services": [
       {
         "name": "Service Name",
-        "details": "Clear explanation of why this service is needed and how it helps",
+        "details": "A single clear sentence explaining why this service is needed",
         "priority": "high" | "medium" | "low"
       }
     ]
     2. Only include truly relevant services
-    3. Keep explanations concise and action-oriented
+    3. Keep explanations concise and direct - one clear sentence only
     4. Focus on immediate needs and clear value-add
     5. Order by priority (high to low)
+    6. Do not include any introductory phrases like "would be beneficial" or "could help with"
+    7. Do not include any markdown in the text - it will be added later
+    8. Do not include any bullet points in the text (*, -, •)
+    9. ALWAYS include a reason why each service was chosen
+    10. Each service MUST have both a name and details explaining why it's needed
 
     Available services to analyze (pick only the most relevant):
     - Smart Contract Development
@@ -223,18 +228,20 @@ async function analyzeContent(content: string) {
     const jsonStr = jsonMatch ? jsonMatch[1] : analysisResponse;
     const analysis = JSON.parse(jsonStr.trim()) as AnalysisResponse;
 
-    // Format services into a clean string
+    // Format services into a clean string with proper spacing
     const servicesText =
       analysis.services
         ?.sort((a: ServiceRecommendation, b: ServiceRecommendation) => {
           const priority = { high: 0, medium: 1, low: 2 } as const;
           return priority[a.priority] - priority[b.priority];
         })
-        ?.map(
-          (service: ServiceRecommendation) =>
-            `**${service.name}**: ${service.details}`
+        ?.map((service: ServiceRecommendation) =>
+          // If there are details, format with name and details
+          service.details
+            ? `**${service.name}**\n${service.details}`
+            : `**${service.name}**`
         )
-        .join("\n\n") || "No services recommended";
+        .join("\n") || "No services recommended";
 
     return {
       project_description: analysis.project_description.replace(/[*_]/g, ""),
@@ -266,9 +273,12 @@ export async function analyzeWebsite(
 
   if (existingAnalysis) {
     return {
-      project_description: existingAnalysis.project_description,
+      project_description:
+        existingAnalysis.project_description ??
+        "No project description available",
       roadmap: existingAnalysis.roadmap,
-      services_analysis: existingAnalysis.services_analysis,
+      services_analysis:
+        existingAnalysis.services_analysis ?? "No services analysis available",
       confidence: existingAnalysis.confidence as "high" | "medium" | "low",
     };
   }

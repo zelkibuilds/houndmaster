@@ -50,10 +50,20 @@ function AnalysisModal({
 }: AnalysisModalProps) {
   if (!isOpen) return null;
 
-  const services = analysis.services_analysis
-    .split(/[,.]/)
-    .filter(Boolean)
-    .map((s) => s.trim());
+  // Process services text to handle both formats:
+  // 1. Full format with details
+  // 2. Simple list of services
+  const formattedServices = analysis.services_analysis
+    .split("\n")
+    .filter((line) => line.trim()) // Remove empty lines
+    .map((line) => {
+      // Check if this is just a service name (no details)
+      if (!line.includes(":") && !line.includes("**")) {
+        return `**${line.trim()}**`; // Add markdown bold
+      }
+      return line;
+    })
+    .join("\n");
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -106,21 +116,8 @@ function AnalysisModal({
             <h4 className="text-orange-300 font-medium mb-2">
               Recommended Services
             </h4>
-            <div className="space-y-6 text-purple-200">
-              {services.map((service) => {
-                const [name, ...detailParts] = service.split(":");
-                const details = detailParts.join(":").trim();
-                return (
-                  <div key={name} className="space-y-1">
-                    <h5 className="text-lg font-medieval text-orange-300">
-                      {name.replace(/\*\*/g, "")}
-                    </h5>
-                    <p className="leading-relaxed text-purple-200/90">
-                      {details}
-                    </p>
-                  </div>
-                );
-              })}
+            <div className="text-purple-200 whitespace-pre-wrap leading-relaxed [&_strong]:text-orange-300">
+              <ReactMarkdown>{formattedServices}</ReactMarkdown>
             </div>
           </div>
           <div className="text-sm text-purple-300/70">
@@ -316,13 +313,7 @@ function ContractBalanceTable({
                     );
                   })()
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => analyzeContract(contract.address)}
-                    className="text-indigo-400 hover:text-indigo-300"
-                  >
-                    Analyze
-                  </button>
+                  <div className="text-sm text-purple-300/70">---</div>
                 )}
               </td>
               <td className="px-6 py-4">
