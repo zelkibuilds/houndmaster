@@ -16,5 +16,8 @@ export default [
     ]),
   ]),
   // API routes
-  ...prefix("api", [route("/contract-data", "routes/api/contract-data.ts")]),
+  ...prefix("api", [
+    route("/contract-data", "routes/api/contract-data.ts"),
+    route("/on-chain-analysis", "routes/api/on-chain-analysis.ts"),
+  ]),
 ] satisfies RouteConfig;
