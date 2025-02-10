@@ -15,7 +15,7 @@ A blockchain contract analysis tool that tracks and analyzes smart contracts acr
 
 - **Frontend**: React + React Router
 - **Styling**: TailwindCSS
-- **Database**: SQLite + Drizzle ORM
+- **Database**: PostgreSQL + Drizzle ORM
 - **Runtime**: Node.js
 - **Package Manager**: pnpm
 - **Type Safety**: TypeScript
@@ -27,6 +27,7 @@ A blockchain contract analysis tool that tracks and analyzes smart contracts acr
 - Node.js (v20 or higher)
 - pnpm (v8 or higher)
 - An Etherscan API key
+- A Supabase PostgreSQL database
 
 ### Installation
 
@@ -49,14 +50,11 @@ A blockchain contract analysis tool that tracks and analyzes smart contracts acr
    cp .env.example .env
    ```
 
-   Then edit `.env` and add your Etherscan API key.
+   Then edit `.env` and add your Etherscan API key and Supabase database credentials.
 
 4. Set up the database:
 
    ```bash
-   # Create data directory
-   mkdir -p data
-
    # Generate initial migration
    pnpm db:generate
 
@@ -88,7 +86,6 @@ The app will be available at `http://localhost:5173`
 
 ### Database Operations
 
-- Never commit the database file (`data/sqlite.db`)
 - Use Drizzle ORM for all database operations
 - Add new queries to `queries.server.ts`
 
@@ -113,7 +110,9 @@ For production deployments, use `pnpm db:migrate` instead of `db:push`.
 Required environment variables:
 
 - `ETHERSCAN_API_KEY`: Your Etherscan API key
-- `DATABASE_PATH`: Path to SQLite database (default: data/sqlite.db)
+- `DATABASE_URL`: Your Supabase PostgreSQL connection string
+- `SUPABASE_URL`: Your Supabase project URL
+- `SUPABASE_KEY`: Your Supabase anon key
 
 ## 📄 License
 

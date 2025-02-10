@@ -1,37 +1,37 @@
 import { sql } from "drizzle-orm";
-import { text, integer, sqliteTable } from "drizzle-orm/sqlite-core";
+import { text, boolean, timestamp, pgTable } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-export const contracts = sqliteTable("contracts", {
+export const contracts = pgTable("contracts", {
   id: text("id").primaryKey(), // Will be address_chain
   address: text("address").notNull(),
   chain: text("chain").notNull(),
   name: text("name"),
   compiler_version: text("compiler_version"),
-  optimization_used: integer("optimization_used", { mode: "boolean" }),
-  runs: integer("runs"),
+  optimization_used: boolean("optimization_used"),
+  runs: text("runs"),
   license_type: text("license_type"),
-  is_proxy: integer("is_proxy", { mode: "boolean" }),
+  is_proxy: boolean("is_proxy"),
   implementation_address: text("implementation_address"),
-  verified_at: text("verified_at").default(sql`CURRENT_TIMESTAMP`),
+  verified_at: timestamp("verified_at").defaultNow(),
 });
 
-export const contractSourceCode = sqliteTable("contract_source_code", {
+export const contractSourceCode = pgTable("contract_source_code", {
   contract_id: text("contract_id")
     .primaryKey()
     .references(() => contracts.id),
   source_code: text("source_code").notNull(),
   constructor_arguments: text("constructor_arguments"),
   evm_version: text("evm_version"),
-  fetched_at: text("fetched_at").default(sql`CURRENT_TIMESTAMP`),
+  fetched_at: timestamp("fetched_at").defaultNow(),
 });
 
-export const contractAbis = sqliteTable("contract_abis", {
+export const contractAbis = pgTable("contract_abis", {
   contract_id: text("contract_id")
     .primaryKey()
     .references(() => contracts.id),
   abi: text("abi").notNull(),
-  fetched_at: text("fetched_at").default(sql`CURRENT_TIMESTAMP`),
+  fetched_at: timestamp("fetched_at").defaultNow(),
 });
 
 export const contractRelations = relations(contracts, ({ one }) => ({

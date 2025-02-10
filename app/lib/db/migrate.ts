@@ -1,21 +1,28 @@
 import * as dotenv from "dotenv";
 import "dotenv/config";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import Database from "better-sqlite3";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
 // Load environment variables
 dotenv.config();
 
-if (!process.env.DATABASE_PATH) {
-  throw new Error("DATABASE_PATH environment variable is required");
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL environment variable is required");
 }
 
 // Initialize database
-const sqlite = new Database(process.env.DATABASE_PATH);
-const db = drizzle(sqlite);
+const migrationClient = postgres(process.env.DATABASE_URL, { max: 1 });
+const db = drizzle(migrationClient);
 
 // Run migrations
 console.log("Running migrations...");
-migrate(db, { migrationsFolder: "./drizzle" });
-console.log("✓ Migrations completed successfully");
+migrate(db, { migrationsFolder: "./drizzle" })
+  .then(() => {
+    console.log("✓ Migrations completed successfully");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("✗ Migration failed", err);
+    process.exit(1);
+  });
