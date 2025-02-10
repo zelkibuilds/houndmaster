@@ -8,10 +8,10 @@ if (!process.env.DATABASE_URL) {
 
 // Initialize database with connection pooling
 const client = postgres(process.env.DATABASE_URL, {
-  max: 10, // Maximum number of connections
-  idle_timeout: 20, // Max idle time in seconds
-  connect_timeout: 10, // Connection timeout in seconds
-  prepare: false, // Disable prepared statements for Supabase
+  max: 1,
+  idle_timeout: 20,
+  connect_timeout: 10,
+  prepare: false,
 });
 
 // Create Drizzle client
