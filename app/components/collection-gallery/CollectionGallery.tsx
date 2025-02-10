@@ -19,18 +19,33 @@ function ContractBalanceTable({
   chain,
   onBack,
 }: ContractBalanceTableProps) {
+  const [expandedContract, setExpandedContract] = useState<string | null>(null);
+
   function formatBalance(balanceWei: string | undefined): string {
     if (!balanceWei) return "0.0000";
-
-    // Convert wei to ETH (18 decimals)
     const balanceEth = Number(balanceWei) / 1e18;
-
-    // Format with full precision and thousand separators
     return new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 4,
       maximumFractionDigits: 18,
       useGrouping: true,
     }).format(balanceEth);
+  }
+
+  function formatSourceCode(sourceCode: string | undefined): string {
+    if (!sourceCode) return "Source code not available";
+    try {
+      return JSON.stringify(JSON.parse(sourceCode), null, 2);
+    } catch {
+      return sourceCode;
+    }
+  }
+
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
   }
 
   return (
@@ -65,25 +80,77 @@ function ContractBalanceTable({
               >
                 Balance ({chain === "apechain" ? "APE" : "ETH"})
               </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-center text-sm font-medieval text-orange-300"
+              >
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-orange-500/20">
             {contracts.map((contract) => (
-              <tr key={contract.address} className="hover:bg-orange-500/5">
-                <td className="px-6 py-4 text-sm font-mono">
-                  <a
-                    href={getExplorerUrl(chain, contract.address)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-200 hover:text-orange-300 transition-colors"
-                  >
-                    {contract.address}
-                  </a>
-                </td>
-                <td className="px-6 py-4 text-right text-sm font-medieval text-purple-200">
-                  {formatBalance(contract.balance)}
-                </td>
-              </tr>
+              <>
+                <tr key={contract.address} className="hover:bg-orange-500/5">
+                  <td className="px-6 py-4 text-sm font-mono">
+                    <a
+                      href={getExplorerUrl(chain, contract.address)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-200 hover:text-orange-300 transition-colors"
+                    >
+                      {contract.address}
+                    </a>
+                  </td>
+                  <td className="px-6 py-4 text-right text-sm font-medieval text-purple-200">
+                    {formatBalance(contract.balance)}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedContract(
+                          expandedContract === contract.address
+                            ? null
+                            : contract.address
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-lg text-sm font-medieval
+                        bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 
+                        hover:text-orange-200 transition-colors"
+                    >
+                      {expandedContract === contract.address
+                        ? "Hide Source"
+                        : "View Source"}
+                    </button>
+                  </td>
+                </tr>
+                {expandedContract === contract.address && (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-4 bg-black/30">
+                      <div className="flex justify-end mb-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            copyToClipboard(
+                              formatSourceCode(contract.sourceCode)
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-lg text-sm font-medieval
+                            bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 
+                            hover:text-purple-200 transition-colors flex items-center gap-2"
+                        >
+                          <span>📋</span>
+                          Copy Source
+                        </button>
+                      </div>
+                      <pre className="text-xs text-purple-200 overflow-x-auto font-mono whitespace-pre-wrap">
+                        {formatSourceCode(contract.sourceCode)}
+                      </pre>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
           </tbody>
         </table>
