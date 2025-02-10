@@ -31,7 +31,7 @@ export async function insertContract(
     name?: string;
     compiler_version?: string;
     optimization_used?: boolean;
-    runs?: number;
+    runs?: string;
     license_type?: string;
     is_proxy?: boolean;
     implementation_address?: string;

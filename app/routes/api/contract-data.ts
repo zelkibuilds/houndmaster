@@ -68,6 +68,15 @@ export async function action({ request }: Route.ActionArgs) {
           const sourceCodeResponse = await blockExplorer.getSourceCode(address);
           if (sourceCodeResponse.status === "1") {
             const sourceCodeData = sourceCodeResponse.result[0];
+            await db.insertContract(address, chain, {
+              name: sourceCodeData.ContractName,
+              compiler_version: sourceCodeData.CompilerVersion,
+              optimization_used: sourceCodeData.OptimizationUsed === "1",
+              runs: sourceCodeData.Runs,
+              license_type: sourceCodeData.LicenseType,
+              is_proxy: sourceCodeData.Proxy === "1",
+              implementation_address: sourceCodeData.Implementation,
+            });
             await db.insertSourceCode(address, chain, {
               source_code: sourceCodeData.SourceCode,
               constructor_arguments: sourceCodeData.ConstructorArguments,
