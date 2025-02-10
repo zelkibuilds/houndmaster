@@ -1,25 +1,66 @@
 import type { Collection, CollectionAnalysis } from "~/types/magic-eden";
 import type { ContractStatus } from "~/types/block-explorer";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { CollectionCard } from "../collection-card/Card";
 import type { MagicEdenAdapter } from "~/lib/adapters/marketplaces/magic-eden";
 import type { Chain } from "~/config/chains";
 import { useParams } from "react-router";
 import { getContractData } from "~/lib/requests/api/contract-data";
 import { getExplorerUrl } from "~/components/collection-card/helpers";
+import { analyzeMintRevenueForContract } from "~/lib/requests/api/on-chain-analysis";
+import type { MintAnalysisResult } from "~/lib/requests/api/on-chain-analysis";
 
 interface ContractBalanceTableProps {
   contracts: ContractStatus[];
   chain: Chain;
   onBack: () => void;
+  contractToCollection: Map<string, CollectionAnalysis>;
+}
+
+function formatSourceCode(sourceCode: string | undefined): string {
+  if (!sourceCode) return "Source code not available";
+  try {
+    return JSON.stringify(JSON.parse(sourceCode), null, 2);
+  } catch {
+    return sourceCode;
+  }
 }
 
 function ContractBalanceTable({
   contracts,
   chain,
   onBack,
+  contractToCollection,
 }: ContractBalanceTableProps) {
   const [expandedContract, setExpandedContract] = useState<string | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<
+    Record<string, MintAnalysisResult>
+  >({});
+  const [analyzingContracts, setAnalyzingContracts] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Split contracts into three categories based on analysis results
+  const { pending, analyzed, failed } = useMemo(() => {
+    const pending: typeof contracts = [];
+    const analyzed: typeof contracts = [];
+    const failed: typeof contracts = [];
+
+    for (const contract of contracts) {
+      const result = analysisResults[contract.address];
+      if (analyzingContracts.has(contract.address)) {
+        pending.push(contract);
+      } else if (!result) {
+        pending.push(contract);
+      } else if (result?.totalRaised && result.confidence !== "low") {
+        analyzed.push(contract);
+      } else if (result) {
+        failed.push(contract);
+      }
+    }
+
+    return { pending, analyzed, failed };
+  }, [contracts, analysisResults, analyzingContracts]);
 
   function formatBalance(balanceWei: string | undefined): string {
     if (!balanceWei) return "0.0000";
@@ -31,13 +72,15 @@ function ContractBalanceTable({
     }).format(balanceEth);
   }
 
-  function formatSourceCode(sourceCode: string | undefined): string {
-    if (!sourceCode) return "Source code not available";
-    try {
-      return JSON.stringify(JSON.parse(sourceCode), null, 2);
-    } catch {
-      return sourceCode;
-    }
+  function formatWeiToEth(weiAmount: string | null): string {
+    if (!weiAmount) return "Could not determine";
+    const wei = BigInt(weiAmount);
+    const eth = Number(wei) / 1e18;
+    return new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+      useGrouping: true,
+    }).format(eth);
   }
 
   async function copyToClipboard(text: string) {
@@ -48,113 +91,214 @@ function ContractBalanceTable({
     }
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-medieval text-orange-400">
-          Contract Balances
-        </h2>
-        <button
-          type="button"
-          onClick={onBack}
-          className="px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
-            bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 
-            hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
-        >
-          Return to the Hunt
-        </button>
-      </div>
-      <div className="overflow-hidden rounded-lg border-2 border-orange-500/20 bg-[#1A0B26]">
-        <table className="min-w-full divide-y divide-orange-500/20">
-          <thead className="bg-orange-500/10">
-            <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-sm font-medieval text-orange-300"
-              >
-                Contract Address
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-right text-sm font-medieval text-orange-300"
-              >
-                Balance ({chain === "apechain" ? "APE" : "ETH"})
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-center text-sm font-medieval text-orange-300"
-              >
-                Actions
-              </th>
+  const analyzeContract = async (address: string) => {
+    setAnalyzingContracts((prev) => new Set(prev).add(address));
+    try {
+      const result = await analyzeMintRevenueForContract({ address, chain });
+      setAnalysisResults((prev) => ({ ...prev, [address]: result }));
+    } catch (error) {
+      console.error("Failed to analyze contract:", error);
+    } finally {
+      setAnalyzingContracts((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(address);
+        return newSet;
+      });
+    }
+  };
+
+  const analyzeAllContracts = async () => {
+    const addresses = contracts.map((c) => c.address);
+    addresses.forEach(analyzeContract);
+  };
+
+  const renderContractTable = (tableContracts: typeof contracts) => (
+    <table className="min-w-full divide-y divide-purple-500/30">
+      <thead className="bg-purple-900/30">
+        <tr>
+          <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
+            Contract
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
+            Collection
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
+            Balance
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
+            Mint Analysis
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-purple-500/30 bg-purple-900/20">
+        {tableContracts.map((contract) => (
+          <React.Fragment key={contract.address}>
+            <tr className="hover:bg-purple-800/30 transition-colors duration-150">
+              <td className="px-6 py-4 whitespace-nowrap">
+                <a
+                  href={getExplorerUrl(chain, contract.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-400 hover:text-indigo-300"
+                >
+                  {contract.address}
+                </a>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-orange-300">
+                {contractToCollection.get(contract.address)?.name || "Unknown"}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-orange-300">
+                {formatBalance(contract.balance)} ETH
+              </td>
+              <td className="px-6 py-4">
+                {analyzingContracts.has(contract.address) ? (
+                  <div className="flex items-center gap-2 text-orange-300">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-400" />
+                    <span>Analyzing...</span>
+                  </div>
+                ) : analysisResults[contract.address] ? (
+                  (() => {
+                    const result = analysisResults[contract.address];
+                    return (
+                      <div className="flex flex-col gap-1">
+                        <div className="font-medium text-orange-300">
+                          {result.totalRaised
+                            ? `${formatWeiToEth(result.totalRaised)} ${
+                                result.currency
+                              }`
+                            : "Could not determine"}
+                        </div>
+                        <div className="text-sm text-purple-300">
+                          Confidence: {result.confidence}
+                        </div>
+                        {result.mintCount && (
+                          <div className="text-sm text-purple-300">
+                            Total Mints: {result.mintCount}
+                          </div>
+                        )}
+                        {result.averageMintPrice && (
+                          <div className="text-sm text-purple-300">
+                            Avg Price: {formatWeiToEth(result.averageMintPrice)}{" "}
+                            {result.currency}
+                          </div>
+                        )}
+                        {result.missingInfo && (
+                          <div className="text-sm text-orange-400">
+                            Missing: {result.missingInfo.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => analyzeContract(contract.address)}
+                    className="text-indigo-400 hover:text-indigo-300"
+                  >
+                    Analyze
+                  </button>
+                )}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedContract(
+                      expandedContract === contract.address
+                        ? null
+                        : contract.address
+                    )
+                  }
+                  className="text-indigo-400 hover:text-indigo-300"
+                >
+                  {expandedContract === contract.address
+                    ? "Hide Source"
+                    : "View Source"}
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-orange-500/20">
-            {contracts.map((contract) => (
-              <>
-                <tr key={contract.address} className="hover:bg-orange-500/5">
-                  <td className="px-6 py-4 text-sm font-mono">
-                    <a
-                      href={getExplorerUrl(chain, contract.address)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-purple-200 hover:text-orange-300 transition-colors"
-                    >
-                      {contract.address}
-                    </a>
-                  </td>
-                  <td className="px-6 py-4 text-right text-sm font-medieval text-purple-200">
-                    {formatBalance(contract.balance)}
-                  </td>
-                  <td className="px-6 py-4 text-center">
+            {expandedContract === contract.address && (
+              <tr>
+                <td colSpan={5} className="px-6 py-4 bg-purple-950/50">
+                  <div className="relative">
+                    <pre className="text-sm overflow-x-auto bg-purple-900/30 p-4 rounded text-purple-200">
+                      {formatSourceCode(contract.sourceCode)}
+                    </pre>
                     <button
                       type="button"
                       onClick={() =>
-                        setExpandedContract(
-                          expandedContract === contract.address
-                            ? null
-                            : contract.address
-                        )
+                        copyToClipboard(formatSourceCode(contract.sourceCode))
                       }
-                      className="px-3 py-1.5 rounded-lg text-sm font-medieval
-                        bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 
-                        hover:text-orange-200 transition-colors"
+                      className="absolute top-2 right-2 px-3 py-1 text-sm bg-purple-800 text-purple-200 border border-purple-600 rounded shadow-sm hover:bg-purple-700"
                     >
-                      {expandedContract === contract.address
-                        ? "Hide Source"
-                        : "View Source"}
+                      Copy
                     </button>
-                  </td>
-                </tr>
-                {expandedContract === contract.address && (
-                  <tr>
-                    <td colSpan={3} className="px-6 py-4 bg-black/30">
-                      <div className="flex justify-end mb-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            copyToClipboard(
-                              formatSourceCode(contract.sourceCode)
-                            )
-                          }
-                          className="px-3 py-1.5 rounded-lg text-sm font-medieval
-                            bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 
-                            hover:text-purple-200 transition-colors flex items-center gap-2"
-                        >
-                          <span>📋</span>
-                          Copy Source
-                        </button>
-                      </div>
-                      <pre className="text-xs text-purple-200 overflow-x-auto font-mono whitespace-pre-wrap">
-                        {formatSourceCode(contract.sourceCode)}
-                      </pre>
-                    </td>
-                  </tr>
-                )}
-              </>
-            ))}
-          </tbody>
-        </table>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </React.Fragment>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex justify-between items-center">
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-orange-400 hover:text-orange-300"
+        >
+          ← Back
+        </button>
+        <button
+          type="button"
+          onClick={analyzeAllContracts}
+          className="px-4 py-2 bg-orange-500/20 text-orange-300 rounded hover:bg-orange-500/30 disabled:opacity-50 border-2 border-orange-500/50"
+          disabled={contracts.length === 0}
+        >
+          Analyze Mint Revenue
+        </button>
       </div>
+
+      {pending.length > 0 && (
+        <div className="overflow-x-auto">
+          <h2 className="text-xl font-medieval text-orange-300 mb-4 flex items-center gap-3">
+            Contracts Pending Analysis
+            {analyzingContracts.size > 0 && (
+              <div className="flex items-center gap-2 text-orange-300 text-base">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-400" />
+                <span>Analyzing {analyzingContracts.size} contracts...</span>
+              </div>
+            )}
+          </h2>
+          {renderContractTable(pending)}
+        </div>
+      )}
+
+      {analyzed.length > 0 && (
+        <div className="overflow-x-auto">
+          <h2 className="text-xl font-medieval text-orange-300 mb-4">
+            Analyzed Contracts
+          </h2>
+          {renderContractTable(analyzed)}
+        </div>
+      )}
+
+      {failed.length > 0 && (
+        <div className="overflow-x-auto opacity-75">
+          <h2 className="text-xl font-medieval text-orange-300 mb-4">
+            Analysis Failed
+          </h2>
+          {renderContractTable(failed)}
+        </div>
+      )}
     </div>
   );
 }
@@ -270,6 +414,7 @@ export function CollectionGallery({
         contracts={contractData}
         chain={chain}
         onBack={resetState}
+        contractToCollection={contractToCollection}
       />
     );
   }

@@ -24,7 +24,16 @@ export async function getContractData(
   request: ContractDataRequest
 ): Promise<BlockExplorerResponse> {
   try {
-    const response = await fetch("/api/contract-data", {
+    const baseUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/api`
+        : process.env.API_URL;
+
+    if (!baseUrl) {
+      throw new Error("API_URL environment variable is not set");
+    }
+
+    const response = await fetch(`${baseUrl}/contract-data`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
