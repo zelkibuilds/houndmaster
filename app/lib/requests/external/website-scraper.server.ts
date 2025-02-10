@@ -262,13 +262,18 @@ async function analyzeContent(content: string) {
 }
 
 export async function analyzeWebsite(
-  contractId: string,
-  url: string,
-  chain: Chain
+  address: string,
+  chain: Chain,
+  url: string
 ) {
-  // Check if analysis already exists
+  // Check if analysis already exists and is less than 24h old
   const existingAnalysis = await db.query.websiteAnalysis.findFirst({
-    where: (wa, { eq }) => eq(wa.contract_id, contractId),
+    where: (wa, { eq, and, gt }) =>
+      and(
+        eq(wa.contract_address, address),
+        eq(wa.contract_chain, chain),
+        gt(wa.analyzed_at, new Date(Date.now() - 24 * 60 * 60 * 1000))
+      ),
   });
 
   if (existingAnalysis) {
@@ -287,7 +292,8 @@ export async function analyzeWebsite(
   const analysis = await analyzeContent(content);
 
   await db.insert(websiteAnalysis).values({
-    contract_id: contractId,
+    contract_address: address,
+    contract_chain: chain,
     project_description: analysis.project_description,
     roadmap: analysis.roadmap,
     services_analysis: analysis.services_analysis,

@@ -186,8 +186,7 @@ export async function analyzeMintRevenue(
   let websiteAnalysis: ProjectAnalysisResult["websiteAnalysis"];
   if (projectUrl) {
     try {
-      const contractId = `${address}_${chain}`;
-      websiteAnalysis = await analyzeWebsite(contractId, projectUrl, chain);
+      websiteAnalysis = await analyzeWebsite(address, chain, projectUrl);
     } catch (error) {
       console.error("Failed to analyze website:", error);
     }

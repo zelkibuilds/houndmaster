@@ -116,8 +116,16 @@ function AnalysisModal({
             <h4 className="text-orange-300 font-medium mb-2">
               Recommended Services
             </h4>
-            <div className="text-purple-200 whitespace-pre-wrap leading-relaxed [&_strong]:text-orange-300">
-              <ReactMarkdown>{formattedServices}</ReactMarkdown>
+            <div className="text-purple-200 whitespace-pre leading-relaxed">
+              <ReactMarkdown
+                components={{
+                  strong: ({ children }) => (
+                    <span className="text-orange-300">{children}</span>
+                  ),
+                }}
+              >
+                {formattedServices}
+              </ReactMarkdown>
             </div>
           </div>
           <div className="text-sm text-purple-300/70">

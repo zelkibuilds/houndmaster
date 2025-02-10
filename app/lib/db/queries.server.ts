@@ -1,15 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "./drizzle.server";
 import { contracts, contractSourceCode, contractAbis } from "./schema";
 import type { Chain } from "~/config/chains";
 
-function getContractId(address: string, chain: Chain): string {
-  return `${address}_${chain}`;
-}
-
 export async function getContract(address: string, chain: Chain) {
   return db.query.contracts.findFirst({
-    where: eq(contracts.id, getContractId(address, chain)),
+    where: and(eq(contracts.address, address), eq(contracts.chain, chain)),
     with: {
       sourceCode: true,
       abi: true,
@@ -37,17 +33,16 @@ export async function insertContract(
     implementation_address?: string;
   }
 ) {
-  const id = getContractId(address, chain);
   return db
     .insert(contracts)
     .values({
-      id,
+      id: `${address}_${chain}`,
       address,
       chain,
       ...data,
     })
     .onConflictDoUpdate({
-      target: contracts.id,
+      target: [contracts.address, contracts.chain],
       set: data,
     });
 }
@@ -61,17 +56,17 @@ export async function insertSourceCode(
     evm_version?: string;
   }
 ) {
-  const contractId = getContractId(address, chain);
   return db.insert(contractSourceCode).values({
-    contract_id: contractId,
+    contract_address: address,
+    contract_chain: chain,
     ...data,
   });
 }
 
 export async function insertABI(address: string, chain: Chain, abi: string) {
-  const contractId = getContractId(address, chain);
   return db.insert(contractAbis).values({
-    contract_id: contractId,
+    contract_address: address,
+    contract_chain: chain,
     abi,
   });
 }
