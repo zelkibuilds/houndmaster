@@ -152,6 +152,19 @@ async function scrapePage(url: string) {
   return { content, urls: Array.from(sitemapUrls) };
 }
 
+interface ServiceRecommendation {
+  name: string;
+  details: string;
+  priority: "high" | "medium" | "low";
+}
+
+interface AnalysisResponse {
+  project_description: string;
+  roadmap: string | null;
+  services: ServiceRecommendation[];
+  confidence: "high" | "medium" | "low";
+}
+
 async function analyzeContent(content: string) {
   if (!content.trim()) {
     return {
@@ -168,15 +181,29 @@ async function analyzeContent(content: string) {
     {
       "project_description": A concise description of what the project is and does,
       "roadmap": Their roadmap or future plans (null if not found),
-      "services_analysis": A list of which RaidGuild services would be most beneficial,
+      "services": An array of recommended services, each with name and details,
       "confidence": Either "high", "medium", or "low"
     }
 
-    Consider these services when analyzing:
-    - Design Sprints for product market fit and UX
-    - Full Stack Development for dApps
+    CRITICAL INSTRUCTIONS FOR services array:
+    1. Return an array of service objects with this exact structure:
+    "services": [
+      {
+        "name": "Service Name",
+        "details": "Clear explanation of why this service is needed and how it helps",
+        "priority": "high" | "medium" | "low"
+      }
+    ]
+    2. Only include truly relevant services
+    3. Keep explanations concise and action-oriented
+    4. Focus on immediate needs and clear value-add
+    5. Order by priority (high to low)
+
+    Available services to analyze (pick only the most relevant):
     - Smart Contract Development
     - Web3 Design and UX
+    - Full Stack Development for dApps
+    - Design Sprints
     - Community Management
     - DAO Setup and Consulting
     - Content Creation
@@ -192,10 +219,29 @@ async function analyzeContent(content: string) {
   });
 
   try {
-    // Extract JSON from markdown if present
     const jsonMatch = analysisResponse.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     const jsonStr = jsonMatch ? jsonMatch[1] : analysisResponse;
-    return JSON.parse(jsonStr.trim());
+    const analysis = JSON.parse(jsonStr.trim()) as AnalysisResponse;
+
+    // Format services into a clean string
+    const servicesText =
+      analysis.services
+        ?.sort((a: ServiceRecommendation, b: ServiceRecommendation) => {
+          const priority = { high: 0, medium: 1, low: 2 } as const;
+          return priority[a.priority] - priority[b.priority];
+        })
+        ?.map(
+          (service: ServiceRecommendation) =>
+            `**${service.name}**: ${service.details}`
+        )
+        .join("\n\n") || "No services recommended";
+
+    return {
+      project_description: analysis.project_description.replace(/[*_]/g, ""),
+      roadmap: analysis.roadmap?.replace(/[*_]/g, "") ?? null,
+      services_analysis: servicesText,
+      confidence: analysis.confidence,
+    };
   } catch (error) {
     console.error("Failed to parse Gemini response:", error);
     console.error("Raw response:", analysisResponse);

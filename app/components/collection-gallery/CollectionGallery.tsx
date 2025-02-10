@@ -9,6 +9,8 @@ import { getContractData } from "~/lib/requests/api/contract-data";
 import { getExplorerUrl } from "~/components/collection-card/helpers";
 import { analyzeMintRevenueForContract } from "~/lib/requests/api/on-chain-analysis";
 import type { MintAnalysisResult } from "~/lib/requests/api/on-chain-analysis";
+import { isValidExternalUrl } from "~/lib/validators/url";
+import ReactMarkdown from "react-markdown";
 
 interface ContractBalanceTableProps {
   contracts: ContractStatus[];
@@ -37,17 +39,28 @@ interface AnalysisModalProps {
   isOpen: boolean;
   onClose: () => void;
   analysis: WebsiteAnalysis;
+  websiteUrl?: string;
 }
 
-function AnalysisModal({ isOpen, onClose, analysis }: AnalysisModalProps) {
+function AnalysisModal({
+  isOpen,
+  onClose,
+  analysis,
+  websiteUrl,
+}: AnalysisModalProps) {
   if (!isOpen) return null;
+
+  const services = analysis.services_analysis
+    .split(/[,.]/)
+    .filter(Boolean)
+    .map((s) => s.trim());
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-purple-900/90 border-2 border-purple-500/50 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-xl font-medieval text-orange-300">
-            Project Analysis
+            Hound's Report
           </h3>
           <button
             type="button"
@@ -57,24 +70,58 @@ function AnalysisModal({ isOpen, onClose, analysis }: AnalysisModalProps) {
             ✕
           </button>
         </div>
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
             <h4 className="text-orange-300 font-medium mb-2">
               Project Description
             </h4>
-            <p className="text-purple-200">{analysis.project_description}</p>
+            <div className="text-purple-200 whitespace-pre-wrap leading-relaxed">
+              <ReactMarkdown>{analysis.project_description}</ReactMarkdown>
+            </div>
           </div>
+          {websiteUrl && (
+            <div>
+              <h4 className="text-orange-300 font-medium mb-2">
+                Project Website
+              </h4>
+              <a
+                href={websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-400 hover:text-indigo-300 break-all"
+              >
+                {websiteUrl}
+              </a>
+            </div>
+          )}
           {analysis.roadmap && (
             <div>
               <h4 className="text-orange-300 font-medium mb-2">Roadmap</h4>
-              <p className="text-purple-200">{analysis.roadmap}</p>
+              <div className="text-purple-200 whitespace-pre-wrap leading-relaxed">
+                <ReactMarkdown>{analysis.roadmap}</ReactMarkdown>
+              </div>
             </div>
           )}
           <div>
             <h4 className="text-orange-300 font-medium mb-2">
               Recommended Services
             </h4>
-            <p className="text-purple-200">{analysis.services_analysis}</p>
+            <div className="space-y-6 text-purple-200">
+              {services.map((service) => {
+                const [name, ...detailParts] = service.split(":");
+                const details = detailParts.join(":").trim();
+                return (
+                  <div key={name} className="space-y-1">
+                    <h5 className="text-lg font-medieval text-orange-300">
+                      {name.replace(/\*\*/g, "")}
+                    </h5>
+                    <p className="leading-relaxed text-purple-200/90">
+                      {details}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="text-sm text-purple-300/70">
             Analysis Confidence: {analysis.confidence}
@@ -101,6 +148,7 @@ function ContractBalanceTable({
   const [selectedAnalysis, setSelectedAnalysis] = useState<{
     isOpen: boolean;
     analysis: WebsiteAnalysis | null;
+    websiteUrl?: string;
   }>({
     isOpen: false,
     analysis: null,
@@ -287,18 +335,29 @@ function ContractBalanceTable({
                     ?.project_description ===
                     "No content available for analysis" ||
                   analysisResults[contract.address]?.websiteAnalysis
-                    ?.project_description === "Failed to analyze content" ? (
-                  <div className="text-sm text-purple-300/70">---</div>
+                    ?.project_description === "Failed to analyze content" ||
+                  analysisResults[
+                    contract.address
+                  ]?.websiteAnalysis?.project_description.startsWith(
+                    "Failed to scrape"
+                  ) ? (
+                  <div className="text-sm text-orange-400">
+                    Failed to analyze website
+                  </div>
                 ) : analysisResults[contract.address]?.websiteAnalysis ? (
                   <button
                     type="button"
                     onClick={() => {
                       const analysis =
                         analysisResults[contract.address]?.websiteAnalysis;
+                      const collection = contractToCollection.get(
+                        contract.address
+                      );
                       if (analysis) {
                         setSelectedAnalysis({
                           isOpen: true,
                           analysis,
+                          websiteUrl: collection?.externalUrl,
                         });
                       }
                     }}
@@ -367,10 +426,17 @@ function ContractBalanceTable({
         <button
           type="button"
           onClick={analyzeAllContracts}
-          className="px-4 py-2 bg-orange-500/20 text-orange-300 rounded hover:bg-orange-500/30 disabled:opacity-50 border-2 border-orange-500/50"
-          disabled={contracts.length === 0}
+          className="px-4 py-2 bg-orange-500/20 text-orange-300 rounded hover:bg-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-orange-500/50"
+          disabled={contracts.length === 0 || analyzingContracts.size > 0}
         >
-          Analyze Mint Revenue
+          {analyzingContracts.size > 0 ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-400" />
+              <span>Analyzing...</span>
+            </div>
+          ) : (
+            "Send Hounds to Investigate"
+          )}
         </button>
       </div>
 
@@ -412,6 +478,7 @@ function ContractBalanceTable({
           isOpen={selectedAnalysis.isOpen}
           onClose={() => setSelectedAnalysis({ isOpen: false, analysis: null })}
           analysis={selectedAnalysis.analysis}
+          websiteUrl={selectedAnalysis.websiteUrl}
         />
       )}
     </div>
@@ -442,12 +509,16 @@ export function CollectionGallery({
 
   const filteredRecentCollections = useMemo(() => {
     if (!showOnlyWithWebsite) return recentCollections;
-    return recentCollections?.filter((collection) => collection.externalUrl);
+    return recentCollections?.filter((collection) =>
+      isValidExternalUrl(collection.externalUrl)
+    );
   }, [recentCollections, showOnlyWithWebsite]);
 
   const filteredOldCollections = useMemo(() => {
     if (!showOnlyWithWebsite) return oldCollections;
-    return oldCollections?.filter((collection) => collection.externalUrl);
+    return oldCollections?.filter((collection) =>
+      isValidExternalUrl(collection.externalUrl)
+    );
   }, [oldCollections, showOnlyWithWebsite]);
 
   const handleSelect = (contractAddress: string) => {
@@ -575,26 +646,26 @@ export function CollectionGallery({
               ${
                 isSelectionEmpty
                   ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
-                  : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
+                  : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-500/20 disabled:hover:text-orange-300 disabled:hover:shadow-none"
               }
             `}
           >
             Release the Hounds
           </button>
-          <button
-            type="button"
-            onClick={() => setShowOnlyWithWebsite((prev) => !prev)}
-            className={`min-w-[200px] px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
-              ${
-                showOnlyWithWebsite
-                  ? "bg-orange-500/20 text-orange-300 border-orange-500/50"
-                  : "bg-purple-900/30 text-purple-300/70 border-purple-700/50"
-              } hover:bg-orange-500/30 hover:text-orange-200 hover:border-orange-400`}
-          >
-            {showOnlyWithWebsite
-              ? "Show All Collections"
-              : "Show Only With Websites"}
-          </button>
+          <div className="flex items-center gap-2">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showOnlyWithWebsite}
+                onChange={() => setShowOnlyWithWebsite((prev) => !prev)}
+                className="sr-only peer"
+              />
+              <div className="w-14 h-7 bg-purple-900/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-orange-300 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-purple-300/70 after:border-purple-400/50 after:border-2 after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500/30 peer-checked:after:bg-orange-400" />
+            </label>
+            <span className="font-medieval text-purple-300/70 peer-checked:text-orange-300">
+              Show Only With Websites
+            </span>
+          </div>
         </div>
       </div>
 

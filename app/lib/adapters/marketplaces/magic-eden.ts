@@ -5,6 +5,7 @@ import type {
   CollectionAnalysis,
   TokenSample,
 } from "~/types/magic-eden";
+import { isValidExternalUrl } from "~/lib/validators/url";
 
 export class MagicEdenAdapter {
   private baseUrl: string;
@@ -70,6 +71,10 @@ export class MagicEdenAdapter {
   }
 
   public formatCollectionData(collection: Collection): CollectionAnalysis {
+    const externalUrl = isValidExternalUrl(collection.externalUrl)
+      ? collection.externalUrl
+      : undefined;
+
     return {
       name: collection.name,
       mintValue: this.calculateTotalMintValue(collection),
@@ -79,7 +84,7 @@ export class MagicEdenAdapter {
       totalSupply: collection.supply,
       remainingSupply: collection.remainingSupply,
       mintStages: collection.mintStages ?? [],
-      externalUrl: collection.externalUrl,
+      externalUrl,
       tokenCount: collection.tokenCount,
       primaryContract: collection.primaryContract,
       twitterUsername: collection.twitterUsername,
@@ -221,7 +226,6 @@ export class MagicEdenAdapter {
     return collections.filter((collection) => {
       try {
         return (
-          //   this.hasSignificantMinting(collection) &&
           this.hasActiveTrading(collection) &&
           this.hasSignificantVolume(collection)
         );
