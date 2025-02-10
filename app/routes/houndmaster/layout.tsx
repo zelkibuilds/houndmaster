@@ -5,11 +5,11 @@ export default function HoundmasterLayout() {
   return (
     <div className="min-h-screen bg-[#1A0B26]">
       <nav
-        className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b-2 border-orange-500/20 px-4 py-3
+        className="sticky top-0 z-50 bg-black/95 backdrop-blur-sm border-b-2 border-orange-500/20 px-4 py-4
         before:absolute before:inset-0 before:bg-gradient-to-b before:from-purple-500/5 before:to-orange-500/5 before:pointer-events-none"
       >
-        <div className="max-w-7xl mx-auto flex items-center gap-3 overflow-x-auto no-scrollbar">
-          <h1 className="font-medieval text-orange-400 text-lg tracking-wider mr-4">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center sm:justify-start gap-2">
+          <h1 className="font-medieval text-orange-400 text-lg tracking-wider mr-2 w-full sm:w-auto text-center sm:text-left">
             Realms
           </h1>
           {SUPPORTED_CHAINS.map((chain) => (
@@ -17,7 +17,7 @@ export default function HoundmasterLayout() {
               key={chain}
               to={`/houndmaster/${chain}`}
               className={({ isActive }) =>
-                `px-4 py-2 rounded-lg font-medieval tracking-wider transition-all duration-200 relative text-sm
+                `px-3 py-1.5 rounded-lg font-medieval tracking-wider transition-all duration-200 relative text-sm
                 before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-b before:from-white/5 before:to-transparent before:pointer-events-none
                 ${
                   isActive

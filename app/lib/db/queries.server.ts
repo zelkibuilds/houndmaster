@@ -37,12 +37,19 @@ export async function insertContract(
     implementation_address?: string;
   }
 ) {
-  return db.insert(contracts).values({
-    id: getContractId(address, chain),
-    address,
-    chain,
-    ...data,
-  });
+  const id = getContractId(address, chain);
+  return db
+    .insert(contracts)
+    .values({
+      id,
+      address,
+      chain,
+      ...data,
+    })
+    .onConflictDoUpdate({
+      target: contracts.id,
+      set: data,
+    });
 }
 
 export async function insertSourceCode(

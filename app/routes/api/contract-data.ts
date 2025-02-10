@@ -52,12 +52,6 @@ export async function action({ request }: Route.ActionArgs) {
   const results: ContractStatus[] = await Promise.all(
     contractAddresses.map(async (address) => {
       const contract = await db.getContract(address, chain);
-
-      // Create base contract if it doesn't exist
-      if (!contract) {
-        await db.insertContract(address, chain, {});
-      }
-
       let sourceCode = contract?.sourceCode?.source_code;
       let abi = contract?.abi?.abi;
       let balance: string | undefined;
