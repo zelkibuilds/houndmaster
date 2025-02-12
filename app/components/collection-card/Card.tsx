@@ -6,10 +6,10 @@ import { TwitterIcon } from "~/components/icons/TwitterIcon";
 import { DiscordIcon } from "~/components/icons/DiscordIcon";
 import type { Chain } from "~/config/chains";
 import { useState } from "react";
+import { CHAIN_TO_TOKEN } from "~/config/tokens";
 
-function formatToken(value: number, chain?: string): string {
-  const symbol = chain === "apechain" ? "APE" : "ETH";
-  return `${value.toFixed(2)} ${symbol}`;
+function formatToken(value: number, chain: Chain): string {
+  return `${value.toFixed(2)} ${CHAIN_TO_TOKEN[chain]}`;
 }
 
 function getTimeSinceDeployment(deployedAt: string): string {
@@ -158,11 +158,7 @@ export function CollectionCard({
               <span className="text-xs">💎</span>
               <span className="font-medieval">Floor Price:</span>{" "}
               {collection.floorPrice
-                ? `${collection.floorPrice.amount.native} ${
-                    chain === "apechain"
-                      ? "APE"
-                      : collection.floorPrice.currency.symbol
-                  }`
+                ? `${collection.floorPrice.amount.native} ${CHAIN_TO_TOKEN[chain]}`
                 : "???"}
             </p>
 

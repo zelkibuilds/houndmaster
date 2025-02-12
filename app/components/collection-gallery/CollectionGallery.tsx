@@ -11,6 +11,7 @@ import { analyzeMintRevenueForContract } from "~/lib/requests/api/on-chain-analy
 import type { MintAnalysisResult } from "~/lib/requests/api/on-chain-analysis";
 import { isValidExternalUrl } from "~/lib/validators/url";
 import ReactMarkdown from "react-markdown";
+import { CHAIN_TO_TOKEN } from "~/config/tokens";
 
 interface ContractBalanceTableProps {
   contracts: ContractStatus[];
@@ -278,7 +279,7 @@ function ContractBalanceTable({
                 {contractToCollection.get(contract.address)?.name || "Unknown"}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-orange-300">
-                {formatBalance(contract.balance)} ETH
+                {formatBalance(contract.balance)} {CHAIN_TO_TOKEN[chain]}
               </td>
               <td className="px-6 py-4">
                 {analyzingContracts.has(contract.address) ? (

@@ -41,139 +41,6 @@ function extractJsonFromMarkdown(text: string): string {
   return text;
 }
 
-async function findPriceInDependencies(
-  sourceCode: string,
-  address: Address,
-  chain: Chain
-): Promise<{
-  price: string | null;
-  confidence: "high" | "medium" | "low";
-  contractAddress: string | null;
-}> {
-  const dependencyPrompt = `
-    Analyze this smart contract source code and find any external contract references that might contain mint price information.
-    Look for:
-    1. Contract addresses stored in state variables
-    2. Functions that delegate to other contracts
-    3. Inheritance from other contracts
-    4. References to price oracles or price feeds
-    
-    Source code:
-    ${sourceCode}
-    
-    Format your response as JSON with these fields:
-    {
-      "potentialPriceContracts": [
-        {
-          "address": string | null,
-          "reason": string,
-          "confidence": "high" | "medium" | "low"
-        }
-      ],
-      "explanation": string
-    }
-
-    Return ONLY the JSON, no other text.
-  `;
-
-  const { text: dependencyResponse } = await generateText({
-    model: genAI,
-    prompt: dependencyPrompt,
-  });
-
-  const dependencyAnalysis = JSON.parse(
-    extractJsonFromMarkdown(dependencyResponse)
-  );
-
-  // Check each potential contract
-  for (const potentialContract of dependencyAnalysis.potentialPriceContracts) {
-    if (!potentialContract.address) continue;
-
-    try {
-      // Validate address format
-      if (!potentialContract.address.match(/^0x[a-fA-F0-9]{40}$/)) {
-        console.log(
-          `Invalid address format for dependency contract: ${potentialContract.address}`
-        );
-        continue;
-      }
-
-      // First check if we already have the contract data
-      let contractData = await getContract(
-        potentialContract.address as `0x${string}`,
-        chain
-      );
-
-      // If we don't have source code, try to fetch it
-      if (!contractData?.sourceCode) {
-        console.log(
-          `Fetching source code for dependency contract ${potentialContract.address}...`
-        );
-        const result = await getContractData({
-          contractAddresses: [potentialContract.address],
-          chain,
-        });
-
-        if (result.results.length > 0) {
-          // Get fresh contract data after fetching
-          contractData = await getContract(
-            potentialContract.address as `0x${string}`,
-            chain
-          );
-        }
-      }
-
-      if (!contractData?.sourceCode) {
-        console.log(
-          `No source code available for dependency contract ${potentialContract.address}`
-        );
-        continue;
-      }
-
-      const pricePrompt = `
-        This contract was referenced by ${address} as a potential source of mint price information.
-        Reason: ${potentialContract.reason}
-
-        Analyze the source code and find any mint price definitions.
-        
-        Source code:
-        ${contractData.sourceCode.source_code}
-        
-        Format your response as JSON:
-        {
-          "mintPrice": string | null,
-          "confidence": "high" | "medium" | "low",
-          "explanation": string
-        }
-
-        Return ONLY the JSON, no other text.
-      `;
-
-      const { text: priceResponse } = await generateText({
-        model: genAI,
-        prompt: pricePrompt,
-      });
-
-      const priceAnalysis = JSON.parse(extractJsonFromMarkdown(priceResponse));
-
-      if (priceAnalysis.mintPrice) {
-        return {
-          price: priceAnalysis.mintPrice,
-          confidence: priceAnalysis.confidence,
-          contractAddress: potentialContract.address,
-        };
-      }
-    } catch (error) {
-      console.error(
-        `Error analyzing dependency contract ${potentialContract.address}:`,
-        error
-      );
-    }
-  }
-
-  return { price: null, confidence: "low", contractAddress: null };
-}
-
 export async function analyzeMintRevenue(
   address: Address,
   chain: Chain,
@@ -233,8 +100,7 @@ async function analyzeContract(
       "currency": string,
       "mintFunctions": string[],
       "confidence": "high" | "medium" | "low",
-      "explanation": string,
-      "isPriceExternal": boolean
+      "explanation": string
     }
 
     Return ONLY the JSON, no other text.
@@ -247,22 +113,6 @@ async function analyzeContract(
   const sourceCodeAnalysis = JSON.parse(
     extractJsonFromMarkdown(sourceCodeResponse)
   );
-
-  // If price is external, try to find it in dependencies
-  if (sourceCodeAnalysis.isPriceExternal) {
-    const { price, confidence, contractAddress } =
-      await findPriceInDependencies(
-        contract.sourceCode.source_code,
-        address,
-        chain
-      );
-
-    if (price) {
-      sourceCodeAnalysis.mintPrice = price;
-      sourceCodeAnalysis.confidence = confidence;
-      sourceCodeAnalysis.explanation += ` (Price found in contract ${contractAddress})`;
-    }
-  }
 
   // If we have high confidence in source code analysis and fixed price
   if (
