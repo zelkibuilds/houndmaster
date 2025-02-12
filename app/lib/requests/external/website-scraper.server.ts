@@ -244,9 +244,22 @@ async function analyzeContent(content: string) {
         )
         .join("\n") || "No services recommended";
 
+    // Handle roadmap that might be either a string or an object
+    let formattedRoadmap: string | null = null;
+    if (analysis.roadmap) {
+      if (typeof analysis.roadmap === "string") {
+        formattedRoadmap = analysis.roadmap.replace(/[*_]/g, "");
+      } else if (typeof analysis.roadmap === "object") {
+        formattedRoadmap = Object.entries(analysis.roadmap)
+          .map(([phase, details]) => `${phase}\n${details}`)
+          .join("\n\n")
+          .replace(/[*_]/g, "");
+      }
+    }
+
     return {
       project_description: analysis.project_description.replace(/[*_]/g, ""),
-      roadmap: analysis.roadmap?.replace(/[*_]/g, "") ?? null,
+      roadmap: formattedRoadmap,
       services_analysis: servicesText,
       confidence: analysis.confidence,
     };

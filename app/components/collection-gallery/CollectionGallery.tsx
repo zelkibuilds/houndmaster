@@ -179,10 +179,25 @@ function ContractBalanceTable({
         pending.push(contract);
       } else if (!result) {
         pending.push(contract);
-      } else if (result?.totalRaised && result.confidence !== "low") {
-        analyzed.push(contract);
-      } else if (result) {
-        failed.push(contract);
+      } else {
+        // Check if both analyses failed
+        const mintAnalysisFailed =
+          !result.totalRaised || result.confidence === "low";
+        const websiteAnalysisFailed =
+          !result.websiteAnalysis ||
+          result.websiteAnalysis.project_description ===
+            "No content available for analysis" ||
+          result.websiteAnalysis.project_description ===
+            "Failed to analyze content" ||
+          result.websiteAnalysis.project_description.startsWith(
+            "Failed to scrape"
+          );
+
+        if (mintAnalysisFailed && websiteAnalysisFailed) {
+          failed.push(contract);
+        } else {
+          analyzed.push(contract);
+        }
       }
     }
 
@@ -261,15 +276,22 @@ function ContractBalanceTable({
     addresses.forEach(analyzeContract);
   };
 
+  function shortenAddress(address: string): string {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  }
+
   const renderContractTable = (tableContracts: typeof contracts) => (
     <table className="min-w-full divide-y divide-purple-500/30">
       <thead className="bg-purple-900/30">
         <tr>
           <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
+            Collection
+          </th>
+          <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
             Contract
           </th>
           <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
-            Collection
+            Website
           </th>
           <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
             Balance
@@ -280,15 +302,19 @@ function ContractBalanceTable({
           <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
             Project Analysis
           </th>
-          <th className="px-6 py-3 text-left text-xs font-medieval text-orange-300 uppercase tracking-wider">
-            Actions
-          </th>
         </tr>
       </thead>
       <tbody className="divide-y divide-purple-500/30 bg-purple-900/20">
-        {tableContracts.map((contract) => (
-          <React.Fragment key={contract.address}>
-            <tr className="hover:bg-purple-800/30 transition-colors duration-150">
+        {tableContracts.map((contract) => {
+          const collection = contractToCollection.get(contract.address);
+          return (
+            <tr
+              key={contract.address}
+              className="hover:bg-purple-800/30 transition-colors duration-150"
+            >
+              <td className="px-6 py-4 whitespace-nowrap text-orange-300">
+                {collection?.name || "Unknown"}
+              </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <a
                   href={getExplorerUrl(chain, contract.address)}
@@ -296,11 +322,22 @@ function ContractBalanceTable({
                   rel="noopener noreferrer"
                   className="text-indigo-400 hover:text-indigo-300"
                 >
-                  {contract.address}
+                  {shortenAddress(contract.address)}
                 </a>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-orange-300">
-                {contractToCollection.get(contract.address)?.name || "Unknown"}
+              <td className="px-6 py-4 whitespace-nowrap">
+                {collection?.externalUrl ? (
+                  <a
+                    href={collection.externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 hover:text-indigo-300"
+                  >
+                    Visit
+                  </a>
+                ) : (
+                  <span className="text-purple-300/50">N/A</span>
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-orange-300">
                 {formatBalance(contract.balance)} {CHAIN_TO_TOKEN[chain]}
@@ -393,46 +430,9 @@ function ContractBalanceTable({
                   <div className="text-sm text-purple-300/70">---</div>
                 )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setExpandedContract(
-                      expandedContract === contract.address
-                        ? null
-                        : contract.address
-                    )
-                  }
-                  className="text-indigo-400 hover:text-indigo-300"
-                >
-                  {expandedContract === contract.address
-                    ? "Hide Source"
-                    : "View Source"}
-                </button>
-              </td>
             </tr>
-            {expandedContract === contract.address && (
-              <tr>
-                <td colSpan={5} className="px-6 py-4 bg-purple-950/50">
-                  <div className="relative">
-                    <pre className="text-sm overflow-x-auto bg-purple-900/30 p-4 rounded text-purple-200">
-                      {formatSourceCode(contract.sourceCode)}
-                    </pre>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        copyToClipboard(formatSourceCode(contract.sourceCode))
-                      }
-                      className="absolute top-2 right-2 px-3 py-1 text-sm bg-purple-800 text-purple-200 border border-purple-600 rounded shadow-sm hover:bg-purple-700"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </React.Fragment>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   );
@@ -467,11 +467,13 @@ function ContractBalanceTable({
       {pending.length > 0 && (
         <div className="w-full">
           <h2 className="text-xl font-medieval text-orange-300 mb-4 flex items-center gap-3">
-            Contracts Pending Analysis
+            Trails Awaiting Investigation
             {analyzingContracts.size > 0 && (
               <div className="flex items-center gap-2 text-orange-300 text-base">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-400" />
-                <span>Analyzing {analyzingContracts.size} contracts...</span>
+                <span>
+                  The Pack is Sniffing {analyzingContracts.size} Trails...
+                </span>
               </div>
             )}
           </h2>
@@ -482,7 +484,7 @@ function ContractBalanceTable({
       {analyzed.length > 0 && (
         <div className="w-full">
           <h2 className="text-xl font-medieval text-orange-300 mb-4">
-            Analyzed Contracts
+            Successful Hunts
           </h2>
           {renderContractTable(analyzed)}
         </div>
@@ -491,7 +493,7 @@ function ContractBalanceTable({
       {failed.length > 0 && (
         <div className="w-full opacity-75">
           <h2 className="text-xl font-medieval text-orange-300 mb-4">
-            Analysis Failed
+            Lost Trails
           </h2>
           {renderContractTable(failed)}
         </div>
@@ -527,7 +529,7 @@ export function CollectionGallery({
 
   const { selectedCollections, toggleCollection, showOnlyWithWebsites } =
     useCollectionSelection();
-  const { isAnalyzing, setIsAnalyzing } = useAnalysisState();
+  const { isAnalyzing, setIsAnalyzing, triggerAnalysis } = useAnalysisState();
   const [showingBalances, setShowingBalances] = useState(false);
   const [contractData, setContractData] = useState<ContractStatus[]>([]);
 
@@ -546,9 +548,6 @@ export function CollectionGallery({
           });
           setContractData(data.results);
           setShowingBalances(true);
-
-          // Then trigger the analysis in the ContractBalanceTable component
-          // The analysis will be handled when the user clicks "Send Hounds to Investigate"
         } catch (error) {
           console.error("Failed to release the hounds:", error);
         } finally {
@@ -564,6 +563,11 @@ export function CollectionGallery({
     showingBalances,
     setIsAnalyzing,
   ]);
+
+  const handleReleaseHounds = () => {
+    if (selectedCollections.size === 0) return;
+    triggerAnalysis();
+  };
 
   const filteredRecentCollections = useMemo(() => {
     if (!recentCollections) return [];
@@ -592,6 +596,9 @@ export function CollectionGallery({
   const resetState = () => {
     setContractData([]);
     clearSelection();
+    setShowingBalances(false);
+    onShowingBalancesChange(false);
+    setIsAnalyzing(false);
   };
 
   // Map to store contract -> collection mapping
@@ -635,7 +642,7 @@ export function CollectionGallery({
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
         <div className="text-2xl font-medieval text-orange-400 animate-pulse">
-          The Hounds are on the Trails...
+          The Pack is Tracking {selectedCollections.size} Scents...
         </div>
         <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
@@ -669,6 +676,25 @@ export function CollectionGallery({
               Trails to Follow
             </span>
           </div>
+        </div>
+
+        <div className="flex justify-end mb-6">
+          <button
+            type="button"
+            onClick={handleReleaseHounds}
+            disabled={selectedCollections.size === 0}
+            className={`px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+              ${
+                selectedCollections.size === 0
+                  ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
+                  : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
+              }
+            `}
+          >
+            {selectedCollections.size === 0
+              ? "Release the Hounds"
+              : `Release the Hounds (${selectedCollections.size})`}
+          </button>
         </div>
 
         <details className="group" open>
