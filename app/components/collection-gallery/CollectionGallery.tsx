@@ -656,25 +656,6 @@ export function CollectionGallery({
           </div>
         </div>
 
-        <div className="flex justify-end mb-6">
-          <button
-            type="button"
-            onClick={handleReleaseHounds}
-            disabled={selectedCollections.size === 0}
-            className={`px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
-              ${
-                selectedCollections.size === 0
-                  ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
-                  : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
-              }
-            `}
-          >
-            {selectedCollections.size === 0
-              ? "Release the Hounds"
-              : `Release the Hounds (${selectedCollections.size})`}
-          </button>
-        </div>
-
         <details className="group" open>
           <summary className="cursor-pointer text-xl font-medieval mb-4 text-purple-300/90 hover:text-orange-300 transition-colors duration-200 flex items-center gap-2">
             <span className="text-orange-500/70 group-open:rotate-90 transition-transform duration-200">
