@@ -11,11 +11,19 @@ import {
   type GetBalanceResponse,
 } from "~/lib/schemas/EtherscanResponse";
 
-if (!process.env.ETHERSCAN_API_KEY) {
-  throw new Error("ETHERSCAN_API_KEY is required");
-}
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY as string;
+const APE_SCAN_API_KEY = process.env.APE_SCAN_API_KEY as string;
+const BASE_SCAN_API_KEY = process.env.BASE_SCAN_API_KEY as string;
+const ABSCAN_API_KEY = process.env.ABSCAN_API_KEY as string;
+const POLYGON_SCAN_API_KEY = process.env.POLYGON_SCAN_API_KEY as string;
+const ARBISCAN_API_KEY = process.env.ARBISCAN_API_KEY as string;
 
-const ETHERSCAN_API_KEY: string = process.env.ETHERSCAN_API_KEY;
+if (!ETHERSCAN_API_KEY) throw new Error("ETHERSCAN_API_KEY is required");
+if (!APE_SCAN_API_KEY) throw new Error("APE_SCAN_API_KEY is required");
+if (!BASE_SCAN_API_KEY) throw new Error("BASE_SCAN_API_KEY is required");
+if (!ABSCAN_API_KEY) throw new Error("ABSCAN_API_KEY is required");
+if (!POLYGON_SCAN_API_KEY) throw new Error("POLYGON_SCAN_API_KEY is required");
+if (!ARBISCAN_API_KEY) throw new Error("ARBISCAN_API_KEY is required");
 
 const BLOCK_EXPLORER_URLS = {
   ethereum: "https://api.etherscan.io",
@@ -102,12 +110,21 @@ const globalRateLimiter = new (class RateLimiter {
   }
 })();
 
+const API_KEYS = {
+  ethereum: ETHERSCAN_API_KEY,
+  base: BASE_SCAN_API_KEY,
+  arbitrum: ARBISCAN_API_KEY,
+  polygon: POLYGON_SCAN_API_KEY,
+  apechain: APE_SCAN_API_KEY,
+  abstract: ABSCAN_API_KEY,
+} as const;
+
 export class BlockExplorerAPI {
   private apiKey: string;
   private baseUrl: string;
 
   constructor(chain: Chain) {
-    this.apiKey = ETHERSCAN_API_KEY;
+    this.apiKey = API_KEYS[chain];
     this.baseUrl = BLOCK_EXPLORER_URLS[chain];
   }
 

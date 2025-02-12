@@ -1,7 +1,6 @@
 export const SUPPORTED_CHAINS = [
   "ethereum",
   "base",
-  "arbitrum",
   "apechain",
   "abstract",
   "polygon",

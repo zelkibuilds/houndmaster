@@ -36,7 +36,6 @@ export async function insertContract(
   return db
     .insert(contracts)
     .values({
-      id: `${address}_${chain}`,
       address,
       chain,
       ...data,
