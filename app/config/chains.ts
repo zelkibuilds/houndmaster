@@ -4,6 +4,7 @@ export const SUPPORTED_CHAINS = [
   "apechain",
   "abstract",
   "polygon",
+  "arbitrum",
 ] as const;
 
 export type Chain = (typeof SUPPORTED_CHAINS)[number];
