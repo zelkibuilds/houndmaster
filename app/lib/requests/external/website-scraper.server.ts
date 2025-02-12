@@ -277,6 +277,9 @@ export async function analyzeWebsite(
   });
 
   if (existingAnalysis) {
+    console.log("[Website Scraper] Returning existing analysis");
+    console.log(existingAnalysis);
+
     return {
       project_description:
         existingAnalysis.project_description ??
@@ -301,6 +304,9 @@ export async function analyzeWebsite(
     source_urls: JSON.stringify(urls),
     raw_content: content,
   });
+
+  console.log("[Website Scraper] Inserted new analysis");
+  console.log(analysis);
 
   return analysis;
 }

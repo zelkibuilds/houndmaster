@@ -7,7 +7,6 @@ import {
   getContractSupply,
   getContractEvents,
 } from "./contract-interactions.server";
-import { getContractData } from "~/lib/requests/api/contract-data";
 import { analyzeWebsite } from "./website-scraper.server";
 
 const genAI = google("gemini-2.0-flash-001");

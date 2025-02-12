@@ -51,26 +51,18 @@ function AnalysisModal({
 }: AnalysisModalProps) {
   if (!isOpen) return null;
 
-  // Process services text to handle both formats:
-  // 1. Full format with details
-  // 2. Simple list of services
+  // Process services text to handle the new format
   const formattedServices = analysis.services_analysis
     .split("\n")
     .filter((line) => line.trim()) // Remove empty lines
-    .map((line) => {
-      // Check if this is just a service name (no details)
-      if (!line.includes(":") && !line.includes("**")) {
-        return `**${line.trim()}**`; // Add markdown bold
-      }
-      return line;
-    })
-    .join("\n");
+    .map((line) => line.trim())
+    .join("\n"); // Remove extra spacing between services
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-purple-900/90 border-2 border-purple-500/50 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-xl font-medieval text-orange-300">
+        <div className="flex justify-between items-start mb-6">
+          <h3 className="text-2xl font-medieval text-orange-300">
             Hound's Report
           </h3>
           <button
@@ -81,18 +73,20 @@ function AnalysisModal({
             ✕
           </button>
         </div>
-        <div className="space-y-6">
+        <div className="space-y-8">
           <div>
-            <h4 className="text-orange-300 font-medium mb-2">
+            <h4 className="text-lg font-medieval text-orange-300 mb-3">
               Project Description
             </h4>
-            <div className="text-purple-200 whitespace-pre-wrap leading-relaxed">
-              <ReactMarkdown>{analysis.project_description}</ReactMarkdown>
+            <div className="prose prose-invert prose-orange max-w-none">
+              <ReactMarkdown className="text-purple-100 whitespace-pre-wrap leading-relaxed">
+                {analysis.project_description}
+              </ReactMarkdown>
             </div>
           </div>
           {websiteUrl && (
             <div>
-              <h4 className="text-orange-300 font-medium mb-2">
+              <h4 className="text-lg font-medieval text-orange-300 mb-3">
                 Project Website
               </h4>
               <a
@@ -107,21 +101,31 @@ function AnalysisModal({
           )}
           {analysis.roadmap && (
             <div>
-              <h4 className="text-orange-300 font-medium mb-2">Roadmap</h4>
-              <div className="text-purple-200 whitespace-pre-wrap leading-relaxed">
-                <ReactMarkdown>{analysis.roadmap}</ReactMarkdown>
+              <h4 className="text-lg font-medieval text-orange-300 mb-3">
+                Roadmap
+              </h4>
+              <div className="prose prose-invert prose-orange max-w-none">
+                <ReactMarkdown className="text-purple-100 whitespace-pre-wrap leading-relaxed">
+                  {analysis.roadmap}
+                </ReactMarkdown>
               </div>
             </div>
           )}
           <div>
-            <h4 className="text-orange-300 font-medium mb-2">
+            <h4 className="text-lg font-medieval text-orange-300 mb-3">
               Recommended Services
             </h4>
-            <div className="text-purple-200 whitespace-pre leading-relaxed">
+            <div className="prose prose-invert prose-orange max-w-none">
               <ReactMarkdown
+                className="text-white whitespace-pre-wrap leading-relaxed"
                 components={{
                   strong: ({ children }) => (
-                    <span className="text-orange-300">{children}</span>
+                    <span className="text-orange-300 font-bold">
+                      {children}
+                    </span>
+                  ),
+                  p: ({ children }) => (
+                    <p className="mb-4 last:mb-0">{children}</p>
                   ),
                 }}
               >
@@ -129,7 +133,7 @@ function AnalysisModal({
               </ReactMarkdown>
             </div>
           </div>
-          <div className="text-sm text-purple-300/70">
+          <div className="text-sm text-purple-300/70 pt-4 border-t border-purple-500/30">
             Analysis Confidence: {analysis.confidence}
           </div>
         </div>
@@ -505,7 +509,7 @@ export function CollectionGallery({
     "idle" | "success" | "error"
   >("idle");
   const [contractData, setContractData] = useState<ContractStatus[]>([]);
-  const [showOnlyWithWebsite, setShowOnlyWithWebsite] = useState(false);
+  const [showOnlyWithWebsite, setShowOnlyWithWebsite] = useState(true);
 
   const filteredRecentCollections = useMemo(() => {
     if (!showOnlyWithWebsite) return recentCollections;
