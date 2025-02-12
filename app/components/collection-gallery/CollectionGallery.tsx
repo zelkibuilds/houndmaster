@@ -1,6 +1,6 @@
 import type { Collection, CollectionAnalysis } from "~/types/magic-eden";
 import type { ContractStatus } from "~/types/block-explorer";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { CollectionCard } from "../collection-card/Card";
 import type { MagicEdenAdapter } from "~/lib/adapters/marketplaces/magic-eden";
 import type { Chain } from "~/config/chains";
@@ -14,6 +14,7 @@ import ReactMarkdown from "react-markdown";
 import { CHAIN_TO_TOKEN } from "~/config/tokens";
 import { useCollectionSelection } from "~/context/collection-selection";
 import { assertChain } from "~/lib/type-guards/chains";
+import { useAnalysisState } from "~/context/analysis-state";
 
 interface ContractBalanceTableProps {
   contracts: ContractStatus[];
@@ -228,7 +229,24 @@ function ContractBalanceTable({
       });
       setAnalysisResults((prev) => ({ ...prev, [address]: result }));
     } catch (error) {
-      console.error("Failed to analyze contract:", error);
+      // If it's a duplicate key error, try to fetch the existing analysis
+      if (
+        error instanceof Error &&
+        error.message.includes("duplicate key value")
+      ) {
+        try {
+          // Just retry the analysis - the server should handle returning existing data
+          const result = await analyzeMintRevenueForContract({
+            address,
+            chain,
+          });
+          setAnalysisResults((prev) => ({ ...prev, [address]: result }));
+        } catch (fetchError) {
+          console.error("Failed to fetch existing analysis:", fetchError);
+        }
+      } else {
+        console.error("Failed to analyze contract:", error);
+      }
     } finally {
       setAnalyzingContracts((prev) => {
         const newSet = new Set(prev);
@@ -507,9 +525,39 @@ export function CollectionGallery({
 
   const { selectedCollections, toggleCollection, showOnlyWithWebsites } =
     useCollectionSelection();
+  const { isAnalyzing, setIsAnalyzing } = useAnalysisState();
   const [showingBalances, setShowingBalances] = useState(false);
   const [contractData, setContractData] = useState<ContractStatus[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAnalyzing && !showingBalances) {
+      const analyze = async () => {
+        try {
+          // First get the contract data
+          const data = await getContractData({
+            contractAddresses: Array.from(selectedCollections),
+            chain,
+          });
+          setContractData(data.results);
+          setShowingBalances(true);
+
+          // Then trigger the analysis in the ContractBalanceTable component
+          // The analysis will be handled when the user clicks "Send Hounds to Investigate"
+        } catch (error) {
+          console.error("Failed to release the hounds:", error);
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+      analyze();
+    }
+  }, [
+    isAnalyzing,
+    chain,
+    selectedCollections,
+    showingBalances,
+    setIsAnalyzing,
+  ]);
 
   const filteredRecentCollections = useMemo(() => {
     if (!recentCollections) return [];
@@ -538,21 +586,6 @@ export function CollectionGallery({
   const resetState = () => {
     setContractData([]);
     clearSelection();
-  };
-
-  const releaseTheHounds = async () => {
-    setIsLoading(true);
-    try {
-      const data = await getContractData({
-        contractAddresses: Array.from(selectedCollections),
-        chain,
-      });
-      setContractData(data.results);
-    } catch (error) {
-      console.error("Failed to release the hounds:", error);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   // Map to store contract -> collection mapping
@@ -592,7 +625,7 @@ export function CollectionGallery({
     );
   };
 
-  if (isLoading) {
+  if (isAnalyzing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
         <div className="text-2xl font-medieval text-orange-400 animate-pulse">

@@ -1,6 +1,6 @@
 import type { Route } from "./+types/chain";
 import type { Chain } from "~/config/chains";
-import { Suspense, useState, useMemo } from "react";
+import { Suspense, useState, useMemo, useRef, useLayoutEffect } from "react";
 import { Await, useNavigation, useParams, useSearchParams } from "react-router";
 import { MagicEdenAdapter } from "~/lib/adapters/marketplaces/magic-eden";
 import { CollectionGallery } from "~/components/collection-gallery/CollectionGallery";
@@ -8,8 +8,8 @@ import { invariantResponse } from "~/lib/invariant-response/invariant-response";
 import { assertChain, isChain } from "~/lib/type-guards/chains";
 import { CHAIN_TO_TOKEN } from "~/config/tokens";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { getContractData } from "~/lib/requests/api/contract-data";
 import { useCollectionSelection } from "~/context/collection-selection";
+import { useAnalysisState } from "~/context/analysis-state";
 
 const DEFAULT_MIN_VOLUME = 1;
 const DEFAULT_MAX_AGE_MONTHS = 6;
@@ -72,6 +72,7 @@ function Filters({ chain }: { chain: Chain }) {
     showOnlyWithWebsites,
     setShowOnlyWithWebsites,
   } = useCollectionSelection();
+  const { triggerAnalysis, isAnalyzing } = useAnalysisState();
   const [formValues, setFormValues] = useState({
     minVolume: Number(searchParams.get("minVolume")) || DEFAULT_MIN_VOLUME,
     maxAgeMonths:
@@ -81,23 +82,10 @@ function Filters({ chain }: { chain: Chain }) {
   const [minVolumeStr, setMinVolumeStr] = useState(
     formValues.minVolume.toString()
   );
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const releaseTheHounds = async () => {
     if (selectedCollections.size === 0) return;
-    setIsAnalyzing(true);
-    try {
-      const data = await getContractData({
-        contractAddresses: Array.from(selectedCollections),
-        chain,
-      });
-      // Handle the data - we'll need to implement this
-      console.log(data);
-    } catch (error) {
-      console.error("Failed to release the hounds:", error);
-    } finally {
-      setIsAnalyzing(false);
-    }
+    triggerAnalysis();
   };
 
   const hasChanges = useMemo(() => {
@@ -326,6 +314,20 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
   const { collections, currentSettings } = loaderData;
   const { chain } = useParams();
   const navigation = useNavigation();
+  const filtersRef = useRef<HTMLDivElement>(null);
+  const [filterHeight, setFilterHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const updateFilterHeight = () => {
+      if (filtersRef.current) {
+        setFilterHeight(filtersRef.current.offsetHeight);
+      }
+    };
+
+    updateFilterHeight();
+    window.addEventListener("resize", updateFilterHeight);
+    return () => window.removeEventListener("resize", updateFilterHeight);
+  }, []);
 
   assertChain(chain);
 
@@ -346,7 +348,10 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
       </div>
     ) : (
       <div className="flex flex-col h-full">
-        <div className="flex-1 overflow-auto">
+        <div
+          className="flex-1 overflow-auto"
+          style={{ paddingBottom: `${filterHeight}px` }}
+        >
           <div className="container mx-auto p-6">
             <Suspense
               key={chain}
@@ -368,7 +373,7 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 z-50">
+        <div className="fixed bottom-0 left-0 right-0 z-50" ref={filtersRef}>
           <div className="flex-none px-6 py-4 bg-[#1A0B26]/80 border-t border-purple-800/30 backdrop-blur-sm">
             <div className="container mx-auto">
               <Filters key={chain} chain={chain} />

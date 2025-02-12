@@ -4,6 +4,7 @@ import { generateText } from "ai";
 import { db } from "~/lib/db/drizzle.server";
 import { websiteAnalysis } from "~/lib/db/schema";
 import type { Chain } from "~/config/chains";
+import { and, eq, sql } from "drizzle-orm";
 
 const genAI = google("gemini-2.0-flash-001");
 
@@ -266,17 +267,17 @@ export async function analyzeWebsite(
   chain: Chain,
   url: string
 ) {
-  // Check if analysis already exists and is less than 24h old
+  // Check if analysis already exists
   const existingAnalysis = await db.query.websiteAnalysis.findFirst({
-    where: (wa, { eq, and, gt }) =>
-      and(
-        eq(wa.contract_address, address),
-        eq(wa.contract_chain, chain),
-        gt(wa.analyzed_at, new Date(Date.now() - 24 * 60 * 60 * 1000))
-      ),
+    where: (wa, { eq, and }) =>
+      and(eq(wa.contract_address, address), eq(wa.contract_chain, chain)),
   });
 
-  if (existingAnalysis) {
+  // If analysis exists and is less than 24h old, return it
+  if (
+    existingAnalysis?.analyzed_at &&
+    existingAnalysis.analyzed_at > new Date(Date.now() - 24 * 60 * 60 * 1000)
+  ) {
     return {
       project_description:
         existingAnalysis.project_description ??
@@ -288,19 +289,41 @@ export async function analyzeWebsite(
     };
   }
 
+  // Scrape and analyze the website
   const { content, urls } = await scrapePage(url);
   const analysis = await analyzeContent(content);
 
-  await db.insert(websiteAnalysis).values({
-    contract_address: address,
-    contract_chain: chain,
-    project_description: analysis.project_description,
-    roadmap: analysis.roadmap,
-    services_analysis: analysis.services_analysis,
-    confidence: analysis.confidence,
-    source_urls: JSON.stringify(urls),
-    raw_content: content,
-  });
+  // If analysis exists but is old, update it. Otherwise insert new.
+  if (existingAnalysis) {
+    await db
+      .update(websiteAnalysis)
+      .set({
+        project_description: analysis.project_description,
+        roadmap: analysis.roadmap,
+        services_analysis: analysis.services_analysis,
+        confidence: analysis.confidence,
+        source_urls: JSON.stringify(urls),
+        raw_content: content,
+        analyzed_at: sql`NOW()`,
+      })
+      .where(
+        and(
+          eq(websiteAnalysis.contract_address, address),
+          eq(websiteAnalysis.contract_chain, chain)
+        )
+      );
+  } else {
+    await db.insert(websiteAnalysis).values({
+      contract_address: address,
+      contract_chain: chain,
+      project_description: analysis.project_description,
+      roadmap: analysis.roadmap,
+      services_analysis: analysis.services_analysis,
+      confidence: analysis.confidence,
+      source_urls: JSON.stringify(urls),
+      raw_content: content,
+    });
+  }
 
   return analysis;
 }
