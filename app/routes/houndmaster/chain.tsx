@@ -316,6 +316,7 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
   const navigation = useNavigation();
   const filtersRef = useRef<HTMLDivElement>(null);
   const [filterHeight, setFilterHeight] = useState(0);
+  const [showFilters, setShowFilters] = useState(true);
 
   useLayoutEffect(() => {
     const updateFilterHeight = () => {
@@ -350,7 +351,7 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
       <div className="flex flex-col h-full">
         <div
           className="flex-1 overflow-auto"
-          style={{ paddingBottom: `${filterHeight}px` }}
+          style={{ paddingBottom: showFilters ? `${filterHeight}px` : "0" }}
         >
           <div className="container mx-auto p-6">
             <Suspense
@@ -366,6 +367,9 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
                     recentCollections={resolvedCollections.recent}
                     oldCollections={resolvedCollections.old}
                     magicEdenAdapter={magicEdenAdapter}
+                    onShowingBalancesChange={(showing) =>
+                      setShowFilters(!showing)
+                    }
                   />
                 )}
               </Await>
@@ -373,13 +377,15 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 z-50" ref={filtersRef}>
-          <div className="flex-none px-6 py-4 bg-[#1A0B26]/80 border-t border-purple-800/30 backdrop-blur-sm">
-            <div className="container mx-auto">
-              <Filters key={chain} chain={chain} />
+        {showFilters && (
+          <div className="fixed bottom-0 left-0 right-0 z-50" ref={filtersRef}>
+            <div className="flex-none px-6 py-4 bg-[#1A0B26]/80 border-t border-purple-800/30 backdrop-blur-sm">
+              <div className="container mx-auto">
+                <Filters key={chain} chain={chain} />
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     );
 

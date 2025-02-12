@@ -513,12 +513,14 @@ interface CollectionGalleryProps {
   recentCollections?: Collection[];
   oldCollections?: Collection[];
   magicEdenAdapter: MagicEdenAdapter;
+  onShowingBalancesChange: (showing: boolean) => void;
 }
 
 export function CollectionGallery({
   recentCollections,
   oldCollections,
   magicEdenAdapter,
+  onShowingBalancesChange,
 }: CollectionGalleryProps) {
   const { chain } = useParams();
   assertChain(chain);
@@ -528,6 +530,10 @@ export function CollectionGallery({
   const { isAnalyzing, setIsAnalyzing } = useAnalysisState();
   const [showingBalances, setShowingBalances] = useState(false);
   const [contractData, setContractData] = useState<ContractStatus[]>([]);
+
+  useEffect(() => {
+    onShowingBalancesChange(showingBalances);
+  }, [showingBalances, onShowingBalancesChange]);
 
   useEffect(() => {
     if (isAnalyzing && !showingBalances) {
@@ -650,9 +656,20 @@ export function CollectionGallery({
   return (
     <>
       <div className="flex flex-col flex-1 min-h-0">
-        <h1 className="text-4xl font-medieval text-orange-400 tracking-wider mb-6">
-          Recently Launched NFT Collections
-        </h1>
+        <div className="flex flex-col gap-3 mb-8">
+          <h1 className="text-4xl font-medieval text-orange-400 tracking-wider">
+            Potential Hunts
+          </h1>
+          <div className="flex items-baseline gap-3">
+            <span className="text-3xl font-medieval text-orange-300">
+              {(filteredRecentCollections?.length || 0) +
+                (filteredOldCollections?.length || 0)}
+            </span>
+            <span className="text-lg font-medieval text-purple-300/90">
+              Trails to Follow
+            </span>
+          </div>
+        </div>
 
         <details className="group" open>
           <summary className="cursor-pointer text-xl font-medieval mb-4 text-purple-300/90 hover:text-orange-300 transition-colors duration-200 flex items-center gap-2">
@@ -660,7 +677,7 @@ export function CollectionGallery({
               ▶
             </span>
             <span className="tracking-wide">
-              View Recent Collections ({filteredRecentCollections?.length})
+              View Recent Trails ({filteredRecentCollections?.length})
             </span>
           </summary>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -674,7 +691,7 @@ export function CollectionGallery({
               ▶
             </span>
             <span className="tracking-wide">
-              View Older Collections ({filteredOldCollections?.length})
+              View Old Trails ({filteredOldCollections?.length})
             </span>
           </summary>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 opacity-80">
