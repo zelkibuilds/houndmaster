@@ -130,103 +130,103 @@ function Filters({ chain }: { chain: Chain }) {
   }, [searchParams, formValues, minVolumeStr]);
 
   return (
-    <div className="rounded-xl shadow-lg border-2 border-purple-800/90 p-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <label className="flex items-center gap-3">
-              <span className="text-purple-100 font-medieval">Min Volume:</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  value={minVolumeStr}
-                  onChange={(e) => {
-                    setMinVolumeStr(e.target.value);
-                    setFormValues((prev) => ({
-                      ...prev,
-                      minVolume: Number(e.target.value) || 0,
-                    }));
-                  }}
-                  step="0.01"
-                  min="0"
-                  className="w-24 px-3 py-2 bg-[#2D1144] border-2 border-purple-800/50 rounded-lg text-orange-100 font-medieval focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 focus:outline-none"
-                />
-                <span className="text-orange-100 font-medieval">
-                  {CHAIN_TO_TOKEN[chain]}
-                </span>
-              </div>
-            </label>
-
-            <label className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-purple-100 font-medieval">
-                  Min Matches:
-                </span>
-                <Tooltip.Provider>
-                  <Tooltip.Root delayDuration={0}>
-                    <Tooltip.Trigger asChild>
-                      <svg
-                        className="w-4 h-4 text-purple-300/70 hover:text-orange-300/90 transition-colors cursor-help"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-label="Information"
-                        role="img"
-                      >
-                        <title>Information about minimum matches</title>
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </Tooltip.Trigger>
-                    <Tooltip.Portal>
-                      <Tooltip.Content
-                        side="top"
-                        align="start"
-                        className="z-50 max-w-xs p-2 bg-[#1A0B26] border-2 border-purple-800/90 rounded-lg text-sm text-purple-100/90 shadow-xl animate-slideDownAndFade"
-                        sideOffset={5}
-                      >
-                        We'll try to fetch at least this many collections (if
-                        available) before showing the data
-                      </Tooltip.Content>
-                    </Tooltip.Portal>
-                  </Tooltip.Root>
-                </Tooltip.Provider>
-              </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col max-[1629px]:flex-col min-[1630px]:flex-row min-[1630px]:items-center gap-4 min-[1630px]:gap-8 min-[1630px]:justify-between">
+        <div className="flex items-center gap-8">
+          <label className="flex items-center gap-4 shrink-0">
+            <span className="text-purple-100 font-medieval min-w-[100px]">
+              Min Volume:
+            </span>
+            <div className="flex items-center gap-2">
               <input
                 type="number"
-                value={formValues.minMatches}
-                onChange={(e) =>
+                value={minVolumeStr}
+                onChange={(e) => {
+                  setMinVolumeStr(e.target.value);
                   setFormValues((prev) => ({
                     ...prev,
-                    minMatches: Number(e.target.value),
-                  }))
-                }
-                min="1"
-                step="1"
+                    minVolume: Number(e.target.value) || 0,
+                  }));
+                }}
+                step="0.01"
+                min="0"
                 className="w-24 px-3 py-2 bg-[#2D1144] border-2 border-purple-800/50 rounded-lg text-orange-100 font-medieval focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 focus:outline-none"
               />
-            </label>
-
-            <label htmlFor="maxAge" className="flex items-center gap-3">
-              <span className="text-purple-100 font-medieval">
-                Recent Within:
+              <span className="text-orange-100 font-medieval min-w-[40px]">
+                {CHAIN_TO_TOKEN[chain]}
               </span>
-              <AgeInput
-                onChange={(value) =>
-                  setFormValues((prev) => ({ ...prev, maxAgeMonths: value }))
-                }
-              />
-            </label>
-          </div>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-1.5 min-w-[100px]">
+              <span className="text-purple-100 font-medieval">
+                Min Matches:
+              </span>
+              <Tooltip.Provider>
+                <Tooltip.Root delayDuration={0}>
+                  <Tooltip.Trigger asChild>
+                    <svg
+                      className="w-4 h-4 text-purple-300/70 hover:text-orange-300/90 transition-colors cursor-help"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-label="Information"
+                      role="img"
+                    >
+                      <title>Information about minimum matches</title>
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      side="top"
+                      align="start"
+                      className="z-50 max-w-xs p-2 bg-[#1A0B26] border-2 border-purple-800/90 rounded-lg text-sm text-purple-100/90 shadow-xl animate-slideDownAndFade"
+                      sideOffset={5}
+                    >
+                      We'll try to fetch at least this many collections (if
+                      available) before showing the data
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              </Tooltip.Provider>
+            </div>
+            <input
+              type="number"
+              value={formValues.minMatches}
+              onChange={(e) =>
+                setFormValues((prev) => ({
+                  ...prev,
+                  minMatches: Number(e.target.value),
+                }))
+              }
+              min="1"
+              step="1"
+              className="w-24 px-3 py-2 bg-[#2D1144] border-2 border-purple-800/50 rounded-lg text-orange-100 font-medieval focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 focus:outline-none"
+            />
+          </label>
+
+          <label htmlFor="maxAge" className="flex items-center gap-4 shrink-0">
+            <span className="text-purple-100 font-medieval min-w-[100px]">
+              Recent Within:
+            </span>
+            <AgeInput
+              onChange={(value) =>
+                setFormValues((prev) => ({ ...prev, maxAgeMonths: value }))
+              }
+            />
+          </label>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4 min-[1630px]:pl-8 min-[1630px]:ml-8 min-[1630px]:border-l border-purple-800/30 shrink-0">
           <button
             type="button"
             onClick={clearSelection}
-            className={`min-w-[210px] px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+            className={`min-w-[240px] h-[42px] px-6 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
               ${
                 selectedCollections.size === 0
                   ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
@@ -242,7 +242,7 @@ function Filters({ chain }: { chain: Chain }) {
             type="button"
             onClick={releaseTheHounds}
             disabled={selectedCollections.size === 0 || isAnalyzing}
-            className={`min-w-[200px] px-6 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+            className={`min-w-[240px] h-[42px] px-6 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
               ${
                 selectedCollections.size === 0 || isAnalyzing
                   ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
@@ -252,8 +252,8 @@ function Filters({ chain }: { chain: Chain }) {
           >
             {isAnalyzing ? "Analyzing..." : "Release the Hounds"}
           </button>
-          <label className="flex items-center gap-2 text-purple-100 font-medieval">
-            <div className="relative inline-block w-12 h-6">
+          <label className="flex items-center gap-2 text-purple-100 font-medieval whitespace-nowrap">
+            <div className="relative inline-block w-10 h-5">
               <input
                 type="checkbox"
                 className="peer sr-only"
@@ -262,33 +262,28 @@ function Filters({ chain }: { chain: Chain }) {
                 onChange={(e) => setShowOnlyWithWebsites(e.target.checked)}
               />
               <span className="absolute inset-0 rounded-full bg-purple-900/50 border border-purple-800/50 transition-colors peer-checked:bg-orange-500/50" />
-              <span className="absolute inset-0.5 w-5 h-5 rounded-full bg-purple-100 transition-transform peer-checked:translate-x-6" />
+              <span className="absolute inset-0.5 w-4 h-4 rounded-full bg-purple-100 transition-transform peer-checked:translate-x-5" />
             </div>
-            Show Only With Websites
+            With Sites
           </label>
         </div>
+      </div>
 
+      {hasChanges && (
         <button
           type="button"
           onClick={() => {
-            if (hasChanges) {
-              setSearchParams({
-                minVolume: minVolumeStr,
-                maxAgeMonths: formValues.maxAgeMonths.toString(),
-                minMatches: formValues.minMatches.toString(),
-              });
-            }
+            setSearchParams({
+              minVolume: minVolumeStr,
+              maxAgeMonths: formValues.maxAgeMonths.toString(),
+              minMatches: formValues.minMatches.toString(),
+            });
           }}
-          disabled={!hasChanges}
-          className={`px-6 py-3 rounded-lg transition-all duration-200 font-medieval text-lg ${
-            hasChanges
-              ? "bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5"
-              : "bg-purple-900/30 text-purple-200/50 cursor-not-allowed border border-purple-800/30"
-          }`}
+          className="px-6 py-3 rounded-lg transition-all duration-200 font-medieval text-lg bg-gradient-to-br from-orange-400 to-orange-600 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:-translate-y-0.5"
         >
           Apply Filters
         </button>
-      </div>
+      )}
     </div>
   );
 }
@@ -342,14 +337,7 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
 
   const content =
     navigation.state === "loading" ? (
-      <div className="flex flex-col overflow-hidden">
-        <div className="flex-none px-6 py-4 border-b border-purple-800/30">
-          <div className="container mx-auto">
-            <div className="bg-[#1A0B26] rounded-xl shadow-lg border-2 border-purple-800/90 p-6 animate-pulse">
-              <div className="h-24 bg-purple-800/20 rounded-lg" />
-            </div>
-          </div>
-        </div>
+      <div className="flex flex-col h-full">
         <div className="flex-1 overflow-auto">
           <div className="container mx-auto p-6">
             <div>Loading {chain} collections...</div>
@@ -358,13 +346,7 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
       </div>
     ) : (
       <div className="flex flex-col h-full">
-        <div className="flex-none px-6 py-4 border-b border-purple-800/30">
-          <div className="container mx-auto">
-            <Filters key={chain} chain={chain} />
-          </div>
-        </div>
-
-        <div className="flex flex-col grow overflow-auto">
+        <div className="flex-1 overflow-auto">
           <div className="container mx-auto p-6">
             <Suspense
               key={chain}
@@ -383,6 +365,14 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
                 )}
               </Await>
             </Suspense>
+          </div>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 z-50">
+          <div className="flex-none px-6 py-4 bg-[#1A0B26]/80 border-t border-purple-800/30 backdrop-blur-sm">
+            <div className="container mx-auto">
+              <Filters key={chain} chain={chain} />
+            </div>
           </div>
         </div>
       </div>
