@@ -38,7 +38,7 @@ export default function HoundmasterLayout() {
           ))}
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto p-4">
+      <main className="max-w-7xl mx-auto p-4 h-full">
         <Outlet />
       </main>
     </div>

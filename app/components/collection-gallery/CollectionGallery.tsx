@@ -12,6 +12,8 @@ import type { MintAnalysisResult } from "~/lib/requests/api/on-chain-analysis";
 import { isValidExternalUrl } from "~/lib/validators/url";
 import ReactMarkdown from "react-markdown";
 import { CHAIN_TO_TOKEN } from "~/config/tokens";
+import { useCollectionSelection } from "~/context/collection-selection";
+import { assertChain } from "~/lib/type-guards/chains";
 
 interface ContractBalanceTableProps {
   contracts: ContractStatus[];
@@ -500,67 +502,54 @@ export function CollectionGallery({
   oldCollections,
   magicEdenAdapter,
 }: CollectionGalleryProps) {
-  const { chain } = useParams() as { chain: Chain };
-  const [selectedContracts, setSelectedContracts] = useState<Set<string>>(
-    new Set()
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [requestStatus, setRequestStatus] = useState<
-    "idle" | "success" | "error"
-  >("idle");
+  const { chain } = useParams();
+  assertChain(chain);
+
+  const { selectedCollections, toggleCollection, showOnlyWithWebsites } =
+    useCollectionSelection();
+  const [showingBalances, setShowingBalances] = useState(false);
   const [contractData, setContractData] = useState<ContractStatus[]>([]);
-  const [showOnlyWithWebsite, setShowOnlyWithWebsite] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const filteredRecentCollections = useMemo(() => {
-    if (!showOnlyWithWebsite) return recentCollections;
-    return recentCollections?.filter((collection) =>
-      isValidExternalUrl(collection.externalUrl)
-    );
-  }, [recentCollections, showOnlyWithWebsite]);
+    if (!recentCollections) return [];
+    return showOnlyWithWebsites
+      ? recentCollections.filter((c) => isValidExternalUrl(c.externalUrl))
+      : recentCollections;
+  }, [recentCollections, showOnlyWithWebsites]);
 
   const filteredOldCollections = useMemo(() => {
-    if (!showOnlyWithWebsite) return oldCollections;
-    return oldCollections?.filter((collection) =>
-      isValidExternalUrl(collection.externalUrl)
-    );
-  }, [oldCollections, showOnlyWithWebsite]);
+    if (!oldCollections) return [];
+    return showOnlyWithWebsites
+      ? oldCollections.filter((c) => isValidExternalUrl(c.externalUrl))
+      : oldCollections;
+  }, [oldCollections, showOnlyWithWebsites]);
 
   const handleSelect = (contractAddress: string) => {
-    setSelectedContracts((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(contractAddress)) {
-        newSet.delete(contractAddress);
-      } else {
-        newSet.add(contractAddress);
-      }
-      return newSet;
-    });
+    toggleCollection(contractAddress);
   };
 
-  const isSelectionEmpty = selectedContracts.size === 0;
+  const isSelectionEmpty = selectedCollections.size === 0;
 
   const clearSelection = () => {
-    setSelectedContracts(new Set());
+    toggleCollection("");
   };
 
   const resetState = () => {
     setContractData([]);
-    setRequestStatus("idle");
     clearSelection();
   };
 
   const releaseTheHounds = async () => {
     setIsLoading(true);
-    setRequestStatus("idle");
     try {
       const data = await getContractData({
-        contractAddresses: Array.from(selectedContracts),
+        contractAddresses: Array.from(selectedCollections),
         chain,
       });
       setContractData(data.results);
-      setRequestStatus("success");
     } catch (error) {
-      setRequestStatus("error");
+      console.error("Failed to release the hounds:", error);
     } finally {
       setIsLoading(false);
     }
@@ -585,17 +574,23 @@ export function CollectionGallery({
     return map;
   }, [recentCollections, oldCollections, magicEdenAdapter]);
 
-  // Helper to get selected collections
-  const selectedCollections = useMemo(
-    () =>
-      Array.from(selectedContracts)
-        .map((contract) => contractToCollection.get(contract))
-        .filter(
-          (collection): collection is CollectionAnalysis =>
-            collection !== undefined
-        ),
-    [selectedContracts, contractToCollection]
-  );
+  const renderCollection = (collection: Collection) => {
+    const formattedCollection =
+      magicEdenAdapter.formatCollectionData(collection);
+    return (
+      <CollectionCard
+        key={collection.primaryContract}
+        collection={formattedCollection}
+        isSelected={
+          collection.primaryContract
+            ? selectedCollections.has(collection.primaryContract)
+            : false
+        }
+        onSelect={toggleCollection}
+        chain={chain}
+      />
+    );
+  };
 
   if (isLoading) {
     return (
@@ -621,123 +616,39 @@ export function CollectionGallery({
 
   return (
     <>
-      <div className="space-y-4 mb-6">
-        <h1 className="text-4xl font-medieval text-orange-400 tracking-wider">
+      <div className="flex flex-col flex-1 min-h-0">
+        <h1 className="text-4xl font-medieval text-orange-400 tracking-wider mb-6">
           Recently Launched NFT Collections
         </h1>
-        <div className="flex gap-4 flex-wrap">
-          <button
-            type="button"
-            onClick={clearSelection}
-            disabled={isSelectionEmpty}
-            className={`min-w-[210px] px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
-              ${
-                isSelectionEmpty
-                  ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
-                  : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
-              }
-            `}
-          >
-            {isSelectionEmpty
-              ? "Clear Selection"
-              : `Clear Selection (${selectedContracts.size})`}
-          </button>
-          <button
-            type="button"
-            onClick={releaseTheHounds}
-            disabled={isSelectionEmpty}
-            className={`min-w-[200px] px-6 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
-              ${
-                isSelectionEmpty
-                  ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
-                  : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-500/20 disabled:hover:text-orange-300 disabled:hover:shadow-none"
-              }
-            `}
-          >
-            Release the Hounds
-          </button>
-          <div className="flex items-center gap-2">
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showOnlyWithWebsite}
-                onChange={() => setShowOnlyWithWebsite((prev) => !prev)}
-                className="sr-only peer"
-              />
-              <div className="w-14 h-7 bg-purple-900/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-orange-300 after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-purple-300/70 after:border-purple-400/50 after:border-2 after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500/30 peer-checked:after:bg-orange-400" />
-            </label>
-            <span className="font-medieval text-purple-300/70 peer-checked:text-orange-300">
-              Show Only With Websites
+
+        <details className="group" open>
+          <summary className="cursor-pointer text-xl font-medieval mb-4 text-purple-300/90 hover:text-orange-300 transition-colors duration-200 flex items-center gap-2">
+            <span className="text-orange-500/70 group-open:rotate-90 transition-transform duration-200">
+              ▶
             </span>
+            <span className="tracking-wide">
+              View Recent Collections ({filteredRecentCollections?.length})
+            </span>
+          </summary>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredRecentCollections?.map(renderCollection)}
           </div>
-        </div>
+        </details>
+
+        <details className="mt-8 group">
+          <summary className="cursor-pointer text-xl font-medieval mb-4 text-purple-300/90 hover:text-orange-300 transition-colors duration-200 flex items-center gap-2">
+            <span className="text-orange-500/70 group-open:rotate-90 transition-transform duration-200">
+              ▶
+            </span>
+            <span className="tracking-wide">
+              View Older Collections ({filteredOldCollections?.length})
+            </span>
+          </summary>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 opacity-80">
+            {filteredOldCollections?.map(renderCollection)}
+          </div>
+        </details>
       </div>
-
-      {requestStatus !== "idle" && (
-        <div
-          className={`mb-6 p-4 rounded-lg font-medieval text-lg ${
-            requestStatus === "success"
-              ? "bg-green-500/20 text-green-300 border-2 border-green-500/50"
-              : "bg-red-500/20 text-red-300 border-2 border-red-500/50"
-          }`}
-        >
-          {requestStatus === "success"
-            ? "The Hounds have returned successfully with their findings!"
-            : "The Hounds encountered some trouble on their journey..."}
-        </div>
-      )}
-
-      <details className="mt-8 group" open>
-        <summary className="cursor-pointer text-xl font-medieval mb-4 text-purple-300/90 hover:text-orange-300 transition-colors duration-200 flex items-center gap-2">
-          <span className="text-orange-500/70 group-open:rotate-90 transition-transform duration-200">
-            ▶
-          </span>
-          <span className="tracking-wide">
-            View Recent Collections ({filteredRecentCollections?.length})
-          </span>
-        </summary>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredRecentCollections?.map((collection) => (
-            <CollectionCard
-              key={collection.name}
-              collection={magicEdenAdapter.formatCollectionData(collection)}
-              isSelected={
-                collection.primaryContract
-                  ? selectedContracts.has(collection.primaryContract)
-                  : false
-              }
-              onSelect={handleSelect}
-              chain={chain}
-            />
-          ))}
-        </div>
-      </details>
-
-      <details className="mt-8 group">
-        <summary className="cursor-pointer text-xl font-medieval mb-4 text-purple-300/90 hover:text-orange-300 transition-colors duration-200 flex items-center gap-2">
-          <span className="text-orange-500/70 group-open:rotate-90 transition-transform duration-200">
-            ▶
-          </span>
-          <span className="tracking-wide">
-            View Older Collections ({filteredOldCollections?.length})
-          </span>
-        </summary>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 opacity-80">
-          {filteredOldCollections?.map((collection) => (
-            <CollectionCard
-              key={collection.name}
-              collection={magicEdenAdapter.formatCollectionData(collection)}
-              isSelected={
-                collection.primaryContract
-                  ? selectedContracts.has(collection.primaryContract)
-                  : false
-              }
-              onSelect={handleSelect}
-              chain={chain}
-            />
-          ))}
-        </div>
-      </details>
     </>
   );
 }

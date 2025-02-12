@@ -8,6 +8,7 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { CollectionSelectionProvider } from "~/context/collection-selection";
 import "./app.css";
 
 export const links = () => [
@@ -45,7 +46,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return (
+    <CollectionSelectionProvider>
+      <Outlet />
+    </CollectionSelectionProvider>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

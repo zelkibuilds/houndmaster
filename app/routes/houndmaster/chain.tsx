@@ -8,6 +8,8 @@ import { invariantResponse } from "~/lib/invariant-response/invariant-response";
 import { assertChain, isChain } from "~/lib/type-guards/chains";
 import { CHAIN_TO_TOKEN } from "~/config/tokens";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { getContractData } from "~/lib/requests/api/contract-data";
+import { useCollectionSelection } from "~/context/collection-selection";
 
 const DEFAULT_MIN_VOLUME = 1;
 const DEFAULT_MAX_AGE_MONTHS = 6;
@@ -64,6 +66,12 @@ function AgeInput({ onChange }: { onChange: (value: number) => void }) {
 
 function Filters({ chain }: { chain: Chain }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    clearSelection,
+    selectedCollections,
+    showOnlyWithWebsites,
+    setShowOnlyWithWebsites,
+  } = useCollectionSelection();
   const [formValues, setFormValues] = useState({
     minVolume: Number(searchParams.get("minVolume")) || DEFAULT_MIN_VOLUME,
     maxAgeMonths:
@@ -73,6 +81,24 @@ function Filters({ chain }: { chain: Chain }) {
   const [minVolumeStr, setMinVolumeStr] = useState(
     formValues.minVolume.toString()
   );
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const releaseTheHounds = async () => {
+    if (selectedCollections.size === 0) return;
+    setIsAnalyzing(true);
+    try {
+      const data = await getContractData({
+        contractAddresses: Array.from(selectedCollections),
+        chain,
+      });
+      // Handle the data - we'll need to implement this
+      console.log(data);
+    } catch (error) {
+      console.error("Failed to release the hounds:", error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const hasChanges = useMemo(() => {
     // If we have search params, compare against them
@@ -199,15 +225,32 @@ function Filters({ chain }: { chain: Chain }) {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="px-4 py-2 rounded-lg bg-purple-900/50 text-purple-100 font-medieval border border-purple-800/50 hover:bg-purple-800/50 transition-colors"
+            onClick={clearSelection}
+            className={`min-w-[210px] px-4 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+              ${
+                selectedCollections.size === 0
+                  ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
+                  : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
+              }
+            `}
           >
-            Clear Selection
+            {selectedCollections.size === 0
+              ? "Clear Selection"
+              : `Clear Selection (${selectedCollections.size})`}
           </button>
           <button
             type="button"
-            className="px-4 py-2 rounded-lg bg-purple-900/50 text-purple-100 font-medieval border border-purple-800/50 hover:bg-purple-800/50 transition-colors"
+            onClick={releaseTheHounds}
+            disabled={selectedCollections.size === 0 || isAnalyzing}
+            className={`min-w-[200px] px-6 py-2 rounded-lg transition-all duration-200 font-medieval tracking-wide border-2
+              ${
+                selectedCollections.size === 0 || isAnalyzing
+                  ? "bg-purple-900/30 text-purple-300/70 cursor-not-allowed border-purple-700/50"
+                  : "bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 hover:text-orange-200 hover:shadow-lg hover:shadow-orange-500/30 border-orange-500/50 hover:border-orange-400"
+              }
+            `}
           >
-            Release the Hounds
+            {isAnalyzing ? "Analyzing..." : "Release the Hounds"}
           </button>
           <label className="flex items-center gap-2 text-purple-100 font-medieval">
             <div className="relative inline-block w-12 h-6">
@@ -215,6 +258,8 @@ function Filters({ chain }: { chain: Chain }) {
                 type="checkbox"
                 className="peer sr-only"
                 id="show-websites"
+                checked={showOnlyWithWebsites}
+                onChange={(e) => setShowOnlyWithWebsites(e.target.checked)}
               />
               <span className="absolute inset-0 rounded-full bg-purple-900/50 border border-purple-800/50 transition-colors peer-checked:bg-orange-500/50" />
               <span className="absolute inset-0.5 w-5 h-5 rounded-full bg-purple-100 transition-transform peer-checked:translate-x-6" />
@@ -282,7 +327,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
   };
 };
 
-export default function MagicEdenPage({ loaderData }: Route.ComponentProps) {
+export default function ChainCollections({ loaderData }: Route.ComponentProps) {
   const { collections, currentSettings } = loaderData;
   const { chain } = useParams();
   const navigation = useNavigation();
@@ -295,9 +340,9 @@ export default function MagicEdenPage({ loaderData }: Route.ComponentProps) {
     minVolume: currentSettings.minVolume,
   });
 
-  if (navigation.state === "loading") {
-    return (
-      <div className="h-screen flex flex-col overflow-hidden">
+  const content =
+    navigation.state === "loading" ? (
+      <div className="flex flex-col overflow-hidden">
         <div className="flex-none px-6 py-4 border-b border-purple-800/30">
           <div className="container mx-auto">
             <div className="bg-[#1A0B26] rounded-xl shadow-lg border-2 border-purple-800/90 p-6 animate-pulse">
@@ -311,38 +356,37 @@ export default function MagicEdenPage({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <div className="flex-none px-6 py-4 border-b border-purple-800/30">
-        <div className="container mx-auto">
-          <Filters key={chain} chain={chain} />
+    ) : (
+      <div className="flex flex-col h-full">
+        <div className="flex-none px-6 py-4 border-b border-purple-800/30">
+          <div className="container mx-auto">
+            <Filters key={chain} chain={chain} />
+          </div>
         </div>
-      </div>
 
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto p-6">
-          <Suspense
-            key={chain}
-            fallback={<div>Loading {chain} collections...</div>}
-          >
-            <Await
-              resolve={collections}
-              errorElement={<div>Error loading collections</div>}
+        <div className="flex flex-col grow overflow-auto">
+          <div className="container mx-auto p-6">
+            <Suspense
+              key={chain}
+              fallback={<div>Loading {chain} collections...</div>}
             >
-              {(resolvedCollections) => (
-                <CollectionGallery
-                  recentCollections={resolvedCollections.recent}
-                  oldCollections={resolvedCollections.old}
-                  magicEdenAdapter={magicEdenAdapter}
-                />
-              )}
-            </Await>
-          </Suspense>
+              <Await
+                resolve={collections}
+                errorElement={<div>Error loading collections</div>}
+              >
+                {(resolvedCollections) => (
+                  <CollectionGallery
+                    recentCollections={resolvedCollections.recent}
+                    oldCollections={resolvedCollections.old}
+                    magicEdenAdapter={magicEdenAdapter}
+                  />
+                )}
+              </Await>
+            </Suspense>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+
+  return content;
 }
