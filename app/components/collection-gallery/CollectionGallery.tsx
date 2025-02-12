@@ -1,6 +1,6 @@
 import type { Collection, CollectionAnalysis } from "~/types/magic-eden";
 import type { ContractStatus } from "~/types/block-explorer";
-import React, { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { CollectionCard } from "../collection-card/Card";
 import type { MagicEdenAdapter } from "~/lib/adapters/marketplaces/magic-eden";
 import type { Chain } from "~/config/chains";
@@ -21,15 +21,6 @@ interface ContractBalanceTableProps {
   chain: Chain;
   onBack: () => void;
   contractToCollection: Map<string, CollectionAnalysis>;
-}
-
-function formatSourceCode(sourceCode: string | undefined): string {
-  if (!sourceCode) return "Source code not available";
-  try {
-    return JSON.stringify(JSON.parse(sourceCode), null, 2);
-  } catch {
-    return sourceCode;
-  }
 }
 
 interface WebsiteAnalysis {
@@ -151,7 +142,6 @@ function ContractBalanceTable({
   onBack,
   contractToCollection,
 }: ContractBalanceTableProps) {
-  const [expandedContract, setExpandedContract] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<
     Record<string, MintAnalysisResult>
   >({});
@@ -223,14 +213,6 @@ function ContractBalanceTable({
       maximumFractionDigits: 6,
       useGrouping: true,
     }).format(eth);
-  }
-
-  async function copyToClipboard(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (err) {
-      console.error("Failed to copy text: ", err);
-    }
   }
 
   const analyzeContract = async (address: string) => {
@@ -527,8 +509,12 @@ export function CollectionGallery({
   const { chain } = useParams();
   assertChain(chain);
 
-  const { selectedCollections, toggleCollection, showOnlyWithWebsites } =
-    useCollectionSelection();
+  const {
+    selectedCollections,
+    toggleCollection,
+    showOnlyWithWebsites,
+    clearSelection,
+  } = useCollectionSelection();
   const { isAnalyzing, setIsAnalyzing, triggerAnalysis } = useAnalysisState();
   const [showingBalances, setShowingBalances] = useState(false);
   const [contractData, setContractData] = useState<ContractStatus[]>([]);
@@ -550,6 +536,7 @@ export function CollectionGallery({
           setShowingBalances(true);
         } catch (error) {
           console.error("Failed to release the hounds:", error);
+          clearSelection(); // Clear selection on error
         } finally {
           setIsAnalyzing(false);
         }
@@ -562,6 +549,7 @@ export function CollectionGallery({
     selectedCollections,
     showingBalances,
     setIsAnalyzing,
+    clearSelection,
   ]);
 
   const handleReleaseHounds = () => {
@@ -582,16 +570,6 @@ export function CollectionGallery({
       ? oldCollections.filter((c) => isValidExternalUrl(c.externalUrl))
       : oldCollections;
   }, [oldCollections, showOnlyWithWebsites]);
-
-  const handleSelect = (contractAddress: string) => {
-    toggleCollection(contractAddress);
-  };
-
-  const isSelectionEmpty = selectedCollections.size === 0;
-
-  const clearSelection = () => {
-    toggleCollection("");
-  };
 
   const resetState = () => {
     setContractData([]);

@@ -317,6 +317,7 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
   const filtersRef = useRef<HTMLDivElement>(null);
   const [filterHeight, setFilterHeight] = useState(0);
   const [showFilters, setShowFilters] = useState(true);
+  const { isAnalyzing } = useAnalysisState();
 
   useLayoutEffect(() => {
     const updateFilterHeight = () => {
@@ -377,7 +378,7 @@ export default function ChainCollections({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        {showFilters && (
+        {showFilters && !isAnalyzing && (
           <div className="fixed bottom-0 left-0 right-0 z-50" ref={filtersRef}>
             <div className="flex-none px-6 py-4 bg-[#1A0B26]/80 border-t border-purple-800/30 backdrop-blur-sm">
               <div className="container mx-auto">

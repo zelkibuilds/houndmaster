@@ -36,7 +36,7 @@ export function CollectionSelectionProvider({
       const next = new Set(prev);
       if (next.has(contractAddress)) {
         next.delete(contractAddress);
-      } else {
+      } else if (contractAddress) {
         next.add(contractAddress);
       }
       return next;
