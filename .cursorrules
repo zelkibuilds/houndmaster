@@ -4,3 +4,4 @@
 - if you run into dependency issues ask for my input
 - use the already existing queries in queries.server.ts when using drizzle
 - if you need to perform a query that does not exist ask me if I want it added to queries.server.ts
+- use pnpm as package manager

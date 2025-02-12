@@ -7,9 +7,11 @@ import { CollectionGallery } from "~/components/collection-gallery/CollectionGal
 import { invariantResponse } from "~/lib/invariant-response/invariant-response";
 import { assertChain, isChain } from "~/lib/type-guards/chains";
 import { CHAIN_TO_TOKEN } from "~/config/tokens";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 const DEFAULT_MIN_VOLUME = 1;
 const DEFAULT_MAX_AGE_MONTHS = 6;
+const DEFAULT_MIN_MATCHES = 200;
 
 function AgeInput({ onChange }: { onChange: (value: number) => void }) {
   const [searchParams] = useSearchParams();
@@ -66,31 +68,43 @@ function Filters({ chain }: { chain: Chain }) {
     minVolume: Number(searchParams.get("minVolume")) || DEFAULT_MIN_VOLUME,
     maxAgeMonths:
       Number(searchParams.get("maxAgeMonths")) || DEFAULT_MAX_AGE_MONTHS,
+    minMatches: Number(searchParams.get("minMatches")) || DEFAULT_MIN_MATCHES,
   });
+  const [minVolumeStr, setMinVolumeStr] = useState(
+    formValues.minVolume.toString()
+  );
 
   const hasChanges = useMemo(() => {
     // If we have search params, compare against them
-    if (searchParams.has("minVolume") || searchParams.has("maxAgeMonths")) {
+    if (
+      searchParams.has("minVolume") ||
+      searchParams.has("maxAgeMonths") ||
+      searchParams.has("minMatches")
+    ) {
       const currentMinVolume =
         Number(searchParams.get("minVolume")) || DEFAULT_MIN_VOLUME;
       const currentMaxAge =
         Number(searchParams.get("maxAgeMonths")) || DEFAULT_MAX_AGE_MONTHS;
+      const currentMinMatches =
+        Number(searchParams.get("minMatches")) || DEFAULT_MIN_MATCHES;
 
       return (
-        formValues.minVolume !== currentMinVolume ||
-        formValues.maxAgeMonths !== currentMaxAge
+        Number(minVolumeStr) !== currentMinVolume ||
+        formValues.maxAgeMonths !== currentMaxAge ||
+        formValues.minMatches !== currentMinMatches
       );
     }
 
     // Otherwise compare against initial values
     return (
-      formValues.minVolume !== DEFAULT_MIN_VOLUME ||
-      formValues.maxAgeMonths !== DEFAULT_MAX_AGE_MONTHS
+      Number(minVolumeStr) !== DEFAULT_MIN_VOLUME ||
+      formValues.maxAgeMonths !== DEFAULT_MAX_AGE_MONTHS ||
+      formValues.minMatches !== DEFAULT_MIN_MATCHES
     );
-  }, [searchParams, formValues]);
+  }, [searchParams, formValues, minVolumeStr]);
 
   return (
-    <div className="mb-6 bg-[#1A0B26] rounded-xl shadow-lg border-2 border-purple-800/90 p-6">
+    <div className="bg-[#1A0B26] rounded-xl shadow-lg border-2 border-purple-800/90 p-6">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-6">
           <label className="flex items-center gap-3">
@@ -98,14 +112,15 @@ function Filters({ chain }: { chain: Chain }) {
             <div className="flex items-center gap-2">
               <input
                 type="number"
-                value={formValues.minVolume}
-                onChange={(e) =>
+                value={minVolumeStr}
+                onChange={(e) => {
+                  setMinVolumeStr(e.target.value);
                   setFormValues((prev) => ({
                     ...prev,
-                    minVolume: Number(e.target.value),
-                  }))
-                }
-                step="0.1"
+                    minVolume: Number(e.target.value) || 0,
+                  }));
+                }}
+                step="0.01"
                 min="0"
                 className="w-24 px-3 py-2 bg-[#2D1144] border-2 border-purple-800/50 rounded-lg text-orange-100 font-medieval focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 focus:outline-none"
               />
@@ -113,6 +128,58 @@ function Filters({ chain }: { chain: Chain }) {
                 {CHAIN_TO_TOKEN[chain]}
               </span>
             </div>
+          </label>
+
+          <label className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-purple-100 font-medieval">
+                Min Matches:
+              </span>
+              <Tooltip.Provider>
+                <Tooltip.Root delayDuration={0}>
+                  <Tooltip.Trigger asChild>
+                    <svg
+                      className="w-4 h-4 text-purple-300/70 hover:text-orange-300/90 transition-colors cursor-help"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-label="Information"
+                      role="img"
+                    >
+                      <title>Information about minimum matches</title>
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </Tooltip.Trigger>
+                  <Tooltip.Portal>
+                    <Tooltip.Content
+                      side="top"
+                      align="start"
+                      className="z-50 max-w-xs p-2 bg-[#1A0B26] border-2 border-purple-800/90 rounded-lg text-sm text-purple-100/90 shadow-xl animate-slideDownAndFade"
+                      sideOffset={5}
+                    >
+                      We'll try to fetch at least this many collections (if
+                      available) before showing the data
+                    </Tooltip.Content>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              </Tooltip.Provider>
+            </div>
+            <input
+              type="number"
+              value={formValues.minMatches}
+              onChange={(e) =>
+                setFormValues((prev) => ({
+                  ...prev,
+                  minMatches: Number(e.target.value),
+                }))
+              }
+              min="1"
+              step="1"
+              className="w-24 px-3 py-2 bg-[#2D1144] border-2 border-purple-800/50 rounded-lg text-orange-100 font-medieval focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/50 focus:outline-none"
+            />
           </label>
 
           <label htmlFor="maxAge" className="flex items-center gap-3">
@@ -132,8 +199,9 @@ function Filters({ chain }: { chain: Chain }) {
           onClick={() => {
             if (hasChanges) {
               setSearchParams({
-                minVolume: formValues.minVolume.toString(),
+                minVolume: minVolumeStr,
                 maxAgeMonths: formValues.maxAgeMonths.toString(),
+                minMatches: formValues.minMatches.toString(),
               });
             }
           }}
@@ -162,11 +230,14 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
     Number(url.searchParams.get("minVolume")) || DEFAULT_MIN_VOLUME;
   const maxAgeMonths =
     Number(url.searchParams.get("maxAgeMonths")) || DEFAULT_MAX_AGE_MONTHS;
+  const minMatches =
+    Number(url.searchParams.get("minMatches")) || DEFAULT_MIN_MATCHES;
 
   const fetcher = new MagicEdenAdapter({
     chain: params.chain,
     maxAgeMonths,
     minVolume,
+    minTotalCollections: minMatches,
   });
 
   const collections = fetcher.fetchCollections();
@@ -177,6 +248,7 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
     currentSettings: {
       minVolume,
       maxAgeMonths,
+      minMatches,
     },
   };
 };
@@ -196,37 +268,52 @@ export default function MagicEdenPage({ loaderData }: Route.ComponentProps) {
 
   if (navigation.state === "loading") {
     return (
-      <div className="container mx-auto p-6">
-        <div className="mb-6 bg-[#1A0B26] rounded-xl shadow-lg border-2 border-purple-800/90 p-6 animate-pulse">
-          <div className="h-24 bg-purple-800/20 rounded-lg" />
+      <div className="h-screen flex flex-col overflow-hidden">
+        <div className="flex-none px-6 py-4 bg-[#0D0416] border-b border-purple-800/30">
+          <div className="container mx-auto">
+            <div className="bg-[#1A0B26] rounded-xl shadow-lg border-2 border-purple-800/90 p-6 animate-pulse">
+              <div className="h-24 bg-purple-800/20 rounded-lg" />
+            </div>
+          </div>
         </div>
-        <div>Loading {chain} collections...</div>
+        <div className="flex-1 overflow-auto">
+          <div className="container mx-auto p-6">
+            <div>Loading {chain} collections...</div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <Suspense
-        key={chain}
-        fallback={<div>Loading {chain} collections...</div>}
-      >
-        <Await
-          resolve={collections}
-          errorElement={<div>Error loading collections</div>}
-        >
-          {(resolvedCollections) => (
-            <>
-              <Filters key={chain} chain={chain} />
-              <CollectionGallery
-                recentCollections={resolvedCollections.recent}
-                oldCollections={resolvedCollections.old}
-                magicEdenAdapter={magicEdenAdapter}
-              />
-            </>
-          )}
-        </Await>
-      </Suspense>
+    <div className="h-screen flex flex-col overflow-hidden">
+      <div className="flex-none px-6 py-4 bg-[#0D0416] border-b border-purple-800/30">
+        <div className="container mx-auto">
+          <Filters key={chain} chain={chain} />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto p-6">
+          <Suspense
+            key={chain}
+            fallback={<div>Loading {chain} collections...</div>}
+          >
+            <Await
+              resolve={collections}
+              errorElement={<div>Error loading collections</div>}
+            >
+              {(resolvedCollections) => (
+                <CollectionGallery
+                  recentCollections={resolvedCollections.recent}
+                  oldCollections={resolvedCollections.old}
+                  magicEdenAdapter={magicEdenAdapter}
+                />
+              )}
+            </Await>
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }
