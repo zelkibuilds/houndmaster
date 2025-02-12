@@ -4,12 +4,16 @@ A blockchain contract analysis tool that tracks and analyzes smart contracts acr
 
 ## 🌟 Features
 
-- Multi-chain support (Ethereum, Base, Arbitrum, Polygon, etc.)
+- Multi-chain support (Ethereum, Base, ApeChain, Abstract, Polygon, Arbitrum)
 - Real-time contract verification status
 - Source code and ABI retrieval
 - Rate-limited API interactions
 - Beautiful medieval-themed UI
 - Collection tracking and analysis
+- AI-powered website analysis
+- Mint revenue analysis
+- Project roadmap extraction
+- Service recommendations
 
 ## 🛠 Tech Stack
 
@@ -19,6 +23,8 @@ A blockchain contract analysis tool that tracks and analyzes smart contracts acr
 - **Runtime**: Node.js
 - **Package Manager**: pnpm
 - **Type Safety**: TypeScript
+- **AI**: Google Gemini API
+- **Web Scraping**: Playwright
 
 ## 🚀 Getting Started
 
@@ -26,8 +32,9 @@ A blockchain contract analysis tool that tracks and analyzes smart contracts acr
 
 - Node.js (v20 or higher)
 - pnpm (v8 or higher)
-- An Etherscan API key
+- Block explorer API keys (Etherscan, BaseScan, ApeScan, ABScan, PolygonScan, ArbiScan)
 - A Supabase PostgreSQL database
+- Google Generative AI API key
 
 ### Installation
 
@@ -50,7 +57,7 @@ A blockchain contract analysis tool that tracks and analyzes smart contracts acr
    cp .env.example .env
    ```
 
-   Then edit `.env` and add your Etherscan API key and Supabase database credentials.
+   Then edit `.env` and add your API keys and database credentials.
 
 4. Set up the database:
 
@@ -103,16 +110,28 @@ For production deployments, use `pnpm db:migrate` instead of `db:push`.
 ### API Rate Limits
 
 - Block explorer APIs are rate-limited to 5 requests/second
-- Use the provided `BlockExplorerAPI` class which handles rate limiting
+- Magic Eden API is rate-limited to 2 requests/second with a minimum interval of 600ms
+- Use the provided API classes which handle rate limiting
 
 ### Environment Variables
 
 Required environment variables:
 
-- `ETHERSCAN_API_KEY`: Your Etherscan API key
-- `DATABASE_URL`: Your Supabase PostgreSQL connection string
-- `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_KEY`: Your Supabase anon key
+- Block Explorer API Keys:
+  - `ETHERSCAN_API_KEY`: Your Etherscan API key
+  - `BASE_SCAN_API_KEY`: Your BaseScan API key
+  - `APE_SCAN_API_KEY`: Your ApeScan API key
+  - `ABSCAN_API_KEY`: Your ABScan API key
+  - `POLYGON_SCAN_API_KEY`: Your PolygonScan API key
+  - `ARBISCAN_API_KEY`: Your ArbiScan API key
+- Database Configuration:
+  - `DATABASE_URL`: Your Supabase PostgreSQL connection string
+  - `SUPABASE_URL`: Your Supabase project URL
+  - `SUPABASE_KEY`: Your Supabase anon key
+- AI Configuration:
+  - `GOOGLE_GENERATIVE_AI_API_KEY`: Your Google Generative AI API key
+- API Configuration:
+  - `API_URL`: Your API URL (defaults to http://localhost:5173/api)
 
 ## 📄 License
 
