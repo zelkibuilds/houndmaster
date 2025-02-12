@@ -1,12 +1,12 @@
+import { createPublicClient, http, type Address, type AbiEvent } from "viem";
 import {
-  createPublicClient,
-  http,
-  type Address,
-  type PublicClient,
-  parseAbiItem,
-  type AbiEvent,
-} from "viem";
-import { mainnet, base, arbitrum, polygon } from "viem/chains";
+  mainnet,
+  base,
+  arbitrum,
+  polygon,
+  apeChain,
+  abstract,
+} from "viem/chains";
 import type { Chain } from "~/config/chains";
 
 const CHAIN_TO_VIEM_CHAIN = {
@@ -14,8 +14,8 @@ const CHAIN_TO_VIEM_CHAIN = {
   base,
   arbitrum,
   polygon,
-  apechain: mainnet, // TODO: Add correct chain config
-  abstract: mainnet, // TODO: Add correct chain config
+  apechain: apeChain,
+  abstract,
 } as const;
 
 interface ContractFunction {
