@@ -125,7 +125,7 @@ function AnalysisModal({
                     </span>
                   ),
                   p: ({ children }) => (
-                    <p className="mb-4 last:mb-0">{children}</p>
+                    <p className="mb-2 last:mb-0">{children}</p>
                   ),
                 }}
               >
