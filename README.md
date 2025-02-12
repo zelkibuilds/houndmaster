@@ -1,6 +1,17 @@
 # 🐕 Houndmaster
 
+<p align="center">
+  <img src="public/houndmaster.png" alt="Houndmaster" width="600" />
+</p>
+
 A blockchain contract analysis tool that tracks and analyzes smart contracts across multiple chains. Think of it as your loyal companion in the world of smart contract exploration.
+
+> **Note**: This project was created in a few days as an experiment to test the limits of Cursor's agentic capabilities, exploring what's possible with AI-assisted development.
+
+## 📊 Technical Documentation
+
+- For a visual overview of the system architecture, data flows, and component relationships, see our [System Diagrams](docs/system-diagrams.md).
+- For a detailed project overview, capabilities, and future roadmap, see our [Project Presentation](docs/presentation.md).
 
 ## 🌟 Features
 

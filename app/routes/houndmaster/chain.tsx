@@ -310,6 +310,28 @@ export const loader = async ({ params, request }: Route.LoaderArgs) => {
   };
 };
 
+export const meta = ({ params }: Route.MetaArgs) => {
+  const chain = params.chain || "ethereum";
+  const chainName = chain.charAt(0).toUpperCase() + chain.slice(1);
+  const title = `${chainName} Collections | Houndmaster`;
+  const description = `Analyze NFT collections on ${chainName}. Track mint revenue, monitor contracts, and get AI-powered insights.`;
+
+  return [
+    { title },
+    { name: "description", content: description },
+    // Open Graph
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:type", content: "website" },
+    { property: "og:image", content: "/meta.png" },
+    // Twitter
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: title },
+    { name: "twitter:description", content: description },
+    { name: "twitter:image", content: "/meta.png" },
+  ];
+};
+
 export default function ChainCollections({ loaderData }: Route.ComponentProps) {
   const { collections, currentSettings } = loaderData;
   const { chain } = useParams();
