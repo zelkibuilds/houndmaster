@@ -143,11 +143,6 @@ export function CollectionCard({
             </div>
           </h2>
           <div className="space-y-2.5 text-purple-100">
-            <p className="font-semibold text-orange-400 flex items-center gap-2 font-medieval">
-              <span className="text-xs">⚔️</span>
-              Total Raised: {formatToken(collection.mintValue, chain)}
-            </p>
-
             <p className="font-medium flex items-center gap-2">
               <span className="text-xs">📈</span>
               <span className="font-medieval">Weekly Volume:</span>{" "}
@@ -177,6 +172,7 @@ export function CollectionCard({
                 rel="noopener noreferrer"
                 className="text-orange-400 hover:text-orange-300 font-medieval inline-flex items-center gap-1"
               >
+                <span className="text-xs">🌐</span>
                 Project Website
                 <span
                   className="transition-transform duration-200"

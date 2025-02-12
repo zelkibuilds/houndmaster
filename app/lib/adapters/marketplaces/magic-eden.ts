@@ -3,7 +3,6 @@ import type {
   Collection,
   ApiResponse,
   CollectionAnalysis,
-  TokenSample,
 } from "~/types/magic-eden";
 import { isValidExternalUrl } from "~/lib/validators/url";
 
@@ -24,6 +23,7 @@ export class MagicEdenAdapter {
       minRequestInterval: config.minRequestInterval ?? 600,
       chain: config.chain ?? "ethereum",
       limit: config.limit ?? 1000,
+      minVolume: config.minVolume ?? 1,
     };
 
     this.lastRequestTime = 0;
@@ -237,7 +237,7 @@ export class MagicEdenAdapter {
   }
 
   private hasSignificantVolume(collection: Collection): boolean {
-    return (collection.volume?.allTime ?? 0) >= 1;
+    return (collection.volume?.allTime ?? 0) >= this.config.minVolume;
   }
 
   private hasSignificantMinting(collection: Collection): boolean {

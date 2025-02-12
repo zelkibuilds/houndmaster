@@ -8,6 +8,7 @@ export interface AdapterConfig {
   requestsPerSecond?: number;
   minRequestInterval?: number;
   limit?: number;
+  minVolume?: number;
 }
 
 export interface PriceAmount {
